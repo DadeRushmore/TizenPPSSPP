@@ -162,7 +162,7 @@ internal sealed class LibraryView
             Text((selected+1).ToString("00")+"  /  "+games.Length.ToString("00")+"    •    Cross / OK: game details",400,851,1120,48,24,"#d8e5ef",true);
         }
         Footer(details?"D-pad: choose / change   •   Cross / OK: select   •   Circle / Back: collection":"Left / Right: browse   •   Cross / OK: details   •   Up: options   •   Down: rescan",
-            "Start + Select: menu   •   Circle uses your saved mapping (R3 if assigned)   •   Info: diagnostics",status);
+            "Create + Options: menu   •   Circle: Back (default mapping)   •   Info: diagnostics",status);
         EndFrame();
     }
     internal void DrawMenu(string title,string description,string[] actions,int selected,bool help,string status) {
@@ -172,7 +172,7 @@ internal sealed class LibraryView
         if(help) {
             string[] topics={
                 "COLLECTION  —  D-pad browses; Cross opens details. Up: options. Down: rescan USB.",
-                "CONTROLS  —  Mapped Circle goes Back (R3 if assigned). Start + Select opens Pause.",
+                "CONTROLS  —  Circle goes Back by default. Create + Options opens Pause. Controllers: remap buttons.",
                 "PERFORMANCE  —  Select + L + R toggles stats. Remote Yellow or keyboard F3 also works.",
                 "CPU & GRAPHICS  —  ARM JIT is the default. Save CPU, 1x / 2x resolution and rendering per game.",
                 "ARTWORK  —  Add Game.background.jpg beside Game.iso to use your own background.",

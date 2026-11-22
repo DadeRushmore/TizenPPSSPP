@@ -1,7 +1,8 @@
 using System;
 
 // Keep physical menu holds separate from gameplay holds cleared on UI transitions.
-// All actions use the saved PSP bindings, including Circle's R3 workaround.
+// All actions use the saved PSP bindings. Native PS5 defaults map Circle to Back;
+// an explicitly chosen custom binding remains supported.
 internal sealed class ControllerNavigation
 {
     readonly PspInputMap physical=new PspInputMap();
