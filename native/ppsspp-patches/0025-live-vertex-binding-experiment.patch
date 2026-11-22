@@ -1,0 +1,54 @@
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -24,6 +24,7 @@
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_gl_profile.h"
+ #include "tizenpsp_vertex_binding.h"
++#include "tizenpsp_experiments.h"
+ extern "C" void glVertexAttribFormat(unsigned,int,unsigned,unsigned char,unsigned) __attribute__((weak));
+ extern "C" void glVertexAttribBinding(unsigned,unsigned) __attribute__((weak));
+ extern "C" void glBindVertexBuffer(unsigned,unsigned,intptr_t,int) __attribute__((weak));
+@@ -77,6 +78,7 @@
+ 		tizenSeparateVertexBinding=glGetError()==GL_NO_ERROR;
+ 		glBindVertexArray((GLuint)oldVAO);
+ 	}
++	TizenVertexBindingCapability(tizenSeparateVertexBinding);
+ 	INFO_LOG(Log::G3D,"TIZEN_VERTEX_BINDING separate=%d",tizenSeparateVertexBinding?1:0);
+ #endif
+ 
+@@ -124,6 +126,9 @@
+ }
+ 
+ void GLQueueRunner::DestroyDeviceObjects() {
++#ifdef TIZENPSP_ARM_JIT
++	tizenSeparateVertexBinding=false;TizenVertexBindingCapability(false);
++#endif
+ 	profiler_.Shutdown();
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 	if (gl_extensions.ARB_vertex_array_object) {
+@@ -991,6 +996,7 @@
+ 
+ #ifdef TIZENPSP_ARM_JIT
+ 	TizenVertexBindingState vertexBindings;
++	const bool separateVertexBinding=tizenSeparateVertexBinding && (tizenpsp_vertex_binding_status()&1)!=0;
+ #endif
+ 	// State filtering tracking.
+ 	int attrMask = 0;
+@@ -1437,7 +1443,7 @@
+ 				attrMask = layout->semanticsMask_;
+ 			}
+ #ifdef TIZENPSP_ARM_JIT
+-			if (!vertexBindings.Apply(tizenBindingAPI,tizenSeparateVertexBinding,layout,
++			if (!vertexBindings.Apply(tizenBindingAPI,separateVertexBinding,layout,
+ 				c.draw.vertexBuffer->buffer_,c.draw.vertexOffset,
+ 				c.draw.vertexBuffer1?c.draw.vertexBuffer1->buffer_:0,c.draw.vertexBuffer1?c.draw.vertexOffset1:0)) {
+ #endif
+--- a/libretro/link.T
++++ b/libretro/link.T
+@@ -1,5 +1,5 @@
+ {
+-   global: retro_*; tizenpsp_jit_*;
++   global: retro_*; tizenpsp_jit_*; tizenpsp_set_vertex_binding*; tizenpsp_vertex_binding_status*;
+    local: *;
+ };
+ 

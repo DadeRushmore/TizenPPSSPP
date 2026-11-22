@@ -1,0 +1,144 @@
+--- a/Common/GPU/OpenGL/GLRenderManager.h
++++ b/Common/GPU/OpenGL/GLRenderManager.h
+@@ -2,6 +2,8 @@
+ 
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_uniform_cache.h"
++#include "tizenpsp_command_cache.h"
++#include "tizenpsp_experiments.h"
+ #endif
+ 
+ #include <atomic>
+@@ -543,6 +545,10 @@
+ 
+ 	void SetDepth(bool enabled, bool write, GLenum func) {
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const uint32_t value[]={uint32_t(enabled),uint32_t(write),uint32_t(func)};
++		if(!QueueState(0,value,sizeof(value)))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::DEPTH;
+ 		data.depth.enabled = enabled;
+@@ -552,6 +558,10 @@
+ 
+ 	void SetViewport(const GLRViewport &vp) {
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const float value[]={float(vp.x),float(vp.y),float(vp.w),float(vp.h),vp.minZ,vp.maxZ};
++		if(!QueueState(1,value,sizeof(value)))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::VIEWPORT;
+ 		data.viewport.vp = vp;
+@@ -559,6 +569,10 @@
+ 
+ 	void SetScissor(const GLRect2D &rc) {
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const int value[]={rc.x,rc.y,rc.w,rc.h};
++		if(!QueueState(2,value,sizeof(value)))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::SCISSOR;
+ 		data.scissor.rc = rc;
+@@ -697,6 +711,10 @@
+ 		// Make this one only a non-debug _assert_, since it often comes first.
+ 		// Lets us collect info about this potential crash through assert extra data.
+ 		_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const uint32_t value[]={uint32_t(colorMask),uint32_t(blendEnabled),srcColor,dstColor,srcAlpha,dstAlpha,funcColor,funcAlpha};
++		if(!QueueState(3,value,sizeof(value)))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::BLEND;
+ 		data.blend.mask = colorMask;
+@@ -710,6 +728,9 @@
+ 	}
+ 
+ 	void SetNoBlendAndMask(int colorMask) {
++#ifdef TIZENPSP_ARM_JIT
++		commandCache_.Clear();
++#endif
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::BLEND;
+@@ -750,6 +771,10 @@
+ 
+ 	void SetBlendFactor(const float color[4]) {
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const float *value=color;
++		if(!QueueState(4,value,sizeof(float)*4))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::BLENDCOLOR;
+ 		CopyFloat4(data.blendColor.color, color);
+@@ -757,6 +782,10 @@
+ 
+ 	void SetRaster(GLboolean cullEnable, GLenum frontFace, GLenum cullFace, GLboolean ditherEnable, GLboolean depthClamp) {
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
++#ifdef TIZENPSP_ARM_JIT
++		const uint32_t value[]={cullEnable,frontFace,cullFace,ditherEnable,depthClamp};
++		if(!QueueState(5,value,sizeof(value)))return;
++#endif
+ 		GLRRenderData &data = curRenderStep_->commands.push_uninitialized();
+ 		data.cmd = GLRRenderCommand::RASTER;
+ 		data.raster.cullEnable = cullEnable;
+@@ -793,6 +822,9 @@
+ 
+ 	// If scissorW == 0, no scissor is applied (the whole render target is cleared).
+ 	void Clear(uint32_t clearColor, float clearZ, int clearStencil, int clearMask, int colorMask, int scissorX, int scissorY, int scissorW, int scissorH) {
++#ifdef TIZENPSP_ARM_JIT
++		commandCache_.Clear();
++#endif
+ 		_dbg_assert_(curRenderStep_ && curRenderStep_->stepType == GLRStepType::RENDER);
+ 		if (!clearMask)
+ 			return;
+@@ -928,6 +960,15 @@
+ 	// Submission time state
+ 	bool insideFrame_ = false;
+ 
++#ifdef TIZENPSP_ARM_JIT
++ TizenCommandCache commandCache_;
++ bool QueueState(unsigned slot,const void *data,unsigned size){
++  bool enabled=(tizenpsp_command_queue_status()&1)!=0;
++  if(!enabled)commandCache_.Clear();
++  bool queued=!enabled || commandCache_.Update(slot,data,size);
++  TizenCommandRecord(queued);return queued;
++ }
++#endif
+ 	GLRStep *curRenderStep_ = nullptr;
+ 	std::vector<GLRStep *> steps_;
+ 	// Guards initSteps_. Recorded into from the emu thread, but also from the loader thread during
+--- a/Common/GPU/OpenGL/GLRenderManager.cpp
++++ b/Common/GPU/OpenGL/GLRenderManager.cpp
+@@ -191,6 +191,9 @@
+ }
+ 
+ void GLRenderManager::BindFramebufferAsRenderTarget(GLRFramebuffer *fb, GLRRenderPassAction color, GLRRenderPassAction depth, GLRRenderPassAction stencil, uint32_t clearColor, float clearDepth, uint8_t clearStencil, const char *tag) {
++#ifdef TIZENPSP_ARM_JIT
++	commandCache_.Clear();
++#endif
+ 	_assert_(insideFrame_);
+ #ifdef _DEBUG
+ 	curProgram_ = nullptr;
+@@ -331,6 +334,9 @@
+ }
+ 
+ void GLRenderManager::BeginFrame(bool enableProfiling) {
++#ifdef TIZENPSP_ARM_JIT
++	commandCache_.Clear();
++#endif
+ 	_dbg_assert_(!exitNotified_);
+ 	_dbg_assert_(!hitExit_);
+ 
+--- a/libretro/link.T
++++ b/libretro/link.T
+@@ -1,5 +1,5 @@
+ {
+-   global: retro_*; tizenpsp_jit_*; tizenpsp_set_vertex_binding*; tizenpsp_vertex_binding_status*;
++   global: tizenpsp_set_command_queue*; tizenpsp_command_queue_status*; retro_*; tizenpsp_jit_*; tizenpsp_set_vertex_binding*; tizenpsp_vertex_binding_status*;
+    local: *;
+ };
+ 

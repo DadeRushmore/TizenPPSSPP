@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>tizen50</TargetFramework>
+    <AssemblyName>TizenPSP</AssemblyName>
+    <LangVersion>8.0</LangVersion>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <PathMap>$(MSBuildProjectDirectory)=/src/tizenpsp/app</PathMap>
+  </PropertyGroup>
+  <ItemGroup><EmbeddedResource Include="tizen-manifest.xml" LogicalName="TizenPSP.Manifest" /></ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Tizen.NET.Sdk" Version="1.1.9" />
+    <PackageReference Include="Tizen.NET" Version="5.0.0.14562" />
+    <PackageReference Include="Tizen.NET.TV" Version="4.4.0.1341" />
+  </ItemGroup>
+  <Target Name="RequireTriangle" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('res/ppsspp_libretro-arm32-jit.so') Or !Exists('res/core-jit.sha256') Or !Exists('res/core-jit-runtime-imports.tsv')" Text="Build/audit/stage the experimental JIT core before packaging v0.16.2." />
+    <Error Condition="!Exists('res/libtizenpsp_corebridge.so') Or !Exists('res/corebridge.sha256')" Text="Build the native hardware bridge first." />
+    <Error Condition="!Exists('res/ppsspp_libretro-arm32.so') Or !Exists('res/core.sha256')" Text="Stage the reviewed PPSSPP core artifact before packaging." />
+    <Error Condition="!Exists('res/core-runtime-imports.tsv') Or !Exists('res/core-runtime-imports.sha256')" Text="Generate the core import manifest from the audited PPSSPP ELF first." />
+    <Error Condition="!Exists('res/libtizenpsp_glview.so') Or !Exists('res/glview.sha256')" Text="Build native GLView clear module first: python tools/build-native.py --zig PATH" />
+    <Error Condition="!Exists('res/libtizenpsp_triangle.so') Or !Exists('res/triangle.sha256')" Text="Build native triangle first: python tools/build-native.py --zig PATH" />
+    <Error Condition="!Exists('res/libtizenpsp_triangle_v010.so') Or !Exists('res/triangle-v010.sha256')" Text="Build the preserved native fallback: python tools/build-native.py --zig PATH" />
+  </Target>
+<ItemGroup><Compile Include="../ports/TizenPS-0.3.34/roelofs-psx-native/NativePads.cs" Link="NativePads.cs"/><Compile Include="../ports/TizenPS-0.3.34/roelofs-psx-native/PhysicalPadState.cs" Link="PhysicalPadState.cs"/></ItemGroup></Project>

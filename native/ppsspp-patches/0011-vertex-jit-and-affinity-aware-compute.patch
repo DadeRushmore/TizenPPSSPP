@@ -1,0 +1,106 @@
+--- a/GPU/Common/VertexDecoderArm.cpp
++++ b/GPU/Common/VertexDecoderArm.cpp
+@@ -16,6 +16,9 @@
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
+ 
+ #include "ppsspp_config.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #if PPSSPP_ARCH(ARM)
+ 
+@@ -159,7 +162,13 @@
+ 
+ JittedVertexDecoder VertexDecoderJitCache::Compile(const VertexDecoder &dec, int32_t *jittedSize) {
+ 	dec_ = &dec;
++#ifdef TIZENPSP_ARM_JIT
++	// A failed compile can rewind over RX pages. Reopen the remaining cache before
++	// emitting; no vertex decoder executes concurrently on the emulation thread.
++	BeginWrite(GetSpaceLeft());
++#else
+ 	BeginWrite(4096);
++#endif
+ 	const u8 *start = AlignCode16();
+ 
+ 	bool prescaleStep = false;
+@@ -253,6 +262,9 @@
+ 	for (int i = 0; i < dec.numSteps_; i++) {
+ 		if (!CompileStep(dec, i)) {
+ 			EndWrite();
++#ifdef TIZENPSP_ARM_JIT
++			TizenVertexCompiled(0, false);
++#endif
+ 			// Reset the code ptr and return zero to indicate that we failed.
+ 			ResetCodePtr(GetOffset(start));
+ 			char temp[1024]{};
+@@ -290,6 +302,9 @@
+ 
+ 	*jittedSize = GetCodePtr() - start;
+ 	EndWrite();
++#ifdef TIZENPSP_ARM_JIT
++	TizenVertexCompiled(*jittedSize, true);
++#endif
+ 	return (JittedVertexDecoder)start;
+ }
+ 
+--- a/GPU/Common/VertexDecoderCommon.cpp
++++ b/GPU/Common/VertexDecoderCommon.cpp
+@@ -16,6 +16,9 @@
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
+ 
+ #include "ppsspp_config.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #include <algorithm>
+ #include <vector>
+@@ -1444,6 +1447,9 @@
+ 		return;
+ 	}
+ 
++#ifdef TIZENPSP_ARM_JIT
++	TizenVertexScope vertexTime(count, jitted_ ? (jittedSize_ > 0 ? 2 : 1) : 0);
++#endif
+ 	if (jitted_ && !validateJit) {
+ 		// We've compiled the steps into optimized machine code, so just jump!
+ 		jitted_(startPtr, decodedptr, count, uvScaleOffset);
+--- a/Common/Thread/ThreadManager.cpp
++++ b/Common/Thread/ThreadManager.cpp
+@@ -8,6 +8,9 @@
+ #include <atomic>
+ 
+ #include "Common/Log.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ #include "Common/Thread/ThreadUtil.h"
+ #include "Common/Thread/ThreadManager.h"
+ 
+@@ -208,6 +211,9 @@
+ 	}
+ 	
+ 	numComputeThreads_ = std::min(32, numRealCores * numLogicalCoresPerCpu);
++#ifdef TIZENPSP_ARM_JIT
++	numComputeThreads_ = TizenConfigureComputeThreads(numComputeThreads_);
++#endif
+ 	// Double it for the IO blocking threads.
+ 	const int numIOThreads = std::min(32, std::max(MIN_IO_BLOCKING_THREADS, numComputeThreads_) * 2);
+ 	numThreads_ = numComputeThreads_ + numIOThreads;
+--- a/Common/Thread/ParallelLoop.cpp
++++ b/Common/Thread/ParallelLoop.cpp
+@@ -110,7 +110,12 @@
+ }
+ 
+ void ParallelRangeLoop(ThreadManager *threadMan, const std::function<void(int, int)> &loop, int lower, int upper, int minSize, int maxThreads, TaskPriority priority) {
+-	if (cpu_info.num_cores == 1 || (minSize >= (upper - lower) && upper > lower)) {
++#ifdef TIZENPSP_ARM_JIT
++	const bool singleCore = threadMan->GetNumLooperThreads() == 1;
++#else
++	const bool singleCore = cpu_info.num_cores == 1;
++#endif
++	if (singleCore || (minSize >= (upper - lower) && upper > lower)) {
+ 		// "Optimization" for single-core devices, or minSize larger than the range.
+ 		// No point in adding threading overhead, let's just do it inline (since this is the blocking variant).
+ 		loop(lower, upper);

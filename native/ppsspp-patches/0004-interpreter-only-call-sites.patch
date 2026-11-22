@@ -1,0 +1,50 @@
+--- a/GPU/Common/VertexDecoderCommon.cpp
++++ b/GPU/Common/VertexDecoderCommon.cpp
+@@ -1410,6 +1410,7 @@
+ 	}
+ #endif
+ 
++#ifdef VERTEXDECODER_JIT_BACKEND
+ 	// Attempt to JIT as well. But only do that if the main CPU JIT is enabled, in order to aid
+ 	// debugging attempts - if the main JIT doesn't work, this one won't do any better, probably.
+ 	if (jitCache) {
+@@ -1424,6 +1425,7 @@
+ 			WARN_LOG(Log::G3D, "Vertex decoder JIT failed! fmt = %08x (%s)", fmt_, GetString(SHADER_STRING_SHORT_DESC).c_str());
+ 		}
+ 	}
++#endif
+ }
+ 
+ void VertexDecoder::DecodeVerts(u8 *decodedptr, const u8 *startPtr, const UVScale *uvScaleOffset, int count) const {
+--- a/Common/MemoryUtil.cpp
++++ b/Common/MemoryUtil.cpp
+@@ -139,6 +139,9 @@
+ // This is purposely not a full wrapper for virtualalloc/mmap, but it
+ // provides exactly the primitive operations that PPSSPP needs.
+ void *AllocateExecutableMemory(size_t size) {
++#ifdef TIZENPSP_NO_JIT
++	return nullptr; // Host ELF loading is separate; the core cannot allocate native code.
++#endif
+ 	void *ptr = nullptr;
+ 	DWORD prot = PAGE_EXECUTE_READWRITE;
+ 	if (PlatformIsWXExclusive())
+@@ -210,6 +213,9 @@
+ #endif
+ 
+ void *AllocateExecutableMemory(size_t size) {
++#ifdef TIZENPSP_NO_JIT
++	return nullptr; // Host ELF loading is separate; the core cannot allocate native code.
++#endif
+ #ifdef USE_MAP_JIT
+ 	{
+ 		std::lock_guard<std::mutex> guard(g_mapJitLock);
+@@ -423,6 +429,9 @@
+ }
+ 
+ bool ProtectMemoryPages(const void* ptr, size_t size, uint32_t memProtFlags) {
++#ifdef TIZENPSP_NO_JIT
++	if (memProtFlags & MEM_PROT_EXEC) return false;
++#endif
+ 	VERBOSE_LOG(Log::JIT, "ProtectMemoryPages: %p (%d) : r%d w%d x%d", ptr, (int)size,
+ 			(memProtFlags & MEM_PROT_READ) != 0, (memProtFlags & MEM_PROT_WRITE) != 0, (memProtFlags & MEM_PROT_EXEC) != 0);
+ 

@@ -1,0 +1,17 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1726,7 +1726,7 @@
+ 
+ if(UNIX AND NOT ANDROID AND NOT APPLE)
+ 	configure_file(
+-		"${CMAKE_SOURCE_DIR}/ppsspp.desktop.in"
++		"${CMAKE_CURRENT_SOURCE_DIR}/ppsspp.desktop.in"
+ 		"${CMAKE_BINARY_DIR}/ppsspp.desktop"
+ 		@ONLY
+ 	)
+@@ -1760,3 +1760,5 @@
+ 		DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/mime/packages"
+ 	)
+ endif()
++
++include("${CMAKE_CURRENT_SOURCE_DIR}/../../native/core-build/targets.cmake")

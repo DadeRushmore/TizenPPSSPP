@@ -1,0 +1,77 @@
+--- a/Core/HLE/sceIo.cpp
++++ b/Core/HLE/sceIo.cpp
+@@ -14,6 +14,10 @@
+ 
+ // Official git repository and contact information can be found at
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
++
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_guest_error.h"
++#endif
+ 
+ #include <algorithm> // std::remove
+ #include <cstdlib>
+@@ -1270,6 +1274,12 @@
+ 	// buffer so we can edit the string.
+ 	std::string buf(str, str_size);
+ 	SanitizeControlChars(buf);
++#ifdef TIZENPSP_ARM_JIT
++	// HLE output runs on the emulation thread. Defer kernel-object inspection
++	// until EmuFrame returns from the guest, outside the active syscall.
++	tizenGuestError.Observe(channel == DebugOutputChannel::StdErr, buf,
++		currentMIPS->pc, currentMIPS->r[MIPS_REG_RA], __KernelGetCurThread());
++#endif
+ 	INFO_LOG(Log::Printf, "%s: %.*s", name, (int)buf.size(), buf.data());
+ }
+ 
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -51,6 +51,9 @@
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_frame_pacing.h"
+ #include "tizenpsp_jit_diagnostics.h"
++#include "tizenpsp_guest_error.h"
++#include "Core/HLE/sceKernelMemory.h"
++#include "Core/HLE/sceKernelThread.h"
+ static std::atomic<unsigned> tizenGuestMillis{0}, tizenActualFlips{0}, tizenFoldedFlips{0};
+ extern "C" unsigned retro_tizenpsp_guest_millis() { return tizenGuestMillis.load(); }
+ extern "C" unsigned retro_tizenpsp_actual_flips() { return tizenActualFlips.load(); }
+@@ -1433,6 +1436,30 @@
+    bool useEmuThread = false;
+    std::atomic<EmuThreadState> emuThreadState(EmuThreadState::DISABLED);
+ 
++#ifdef TIZENPSP_ARM_JIT
++   static void ReportGuestError() {
++      TizenGuestErrorEvent event;
++      if (!tizenGuestError.Take(event)) return;
++      // Called on the emulation thread only, after the guest run loop returns.
++      // These are diagnostic reads; no thread state or guest memory is changed.
++      auto threads = GetThreadsInfo();
++      INFO_LOG(Log::Boot, "GUEST_ERROR_CAPTURE event=spider_expand pc=%08x ra=%08x thread=%d boundary_pc=%08x user_free=%u user_largest=%u guest_threads=%u max_rows=32",
++         event.pc, event.ra, event.thread, currentMIPS->pc,
++         userMemory.GetTotalFreeBytes(), userMemory.GetLargestFreeBlockSize(), (unsigned)threads.size());
++      unsigned rows = 0;
++      for (const auto &thread : threads) {
++         if (rows++ == 32) break;
++         char name[KERNELOBJECT_MAX_NAME_LENGTH + 1];
++         memcpy(name, thread.name, sizeof(name));
++         name[sizeof(name) - 1] = 0;
++         for (char *c = name; *c; ++c) if ((unsigned char)*c <= 32) *c = '_';
++         INFO_LOG(Log::Boot, "GUEST_ERROR_THREAD id=%d name=%s pc=%08x status=%u wait_type=%u wait_id=%d priority=%d current=%u",
++            thread.id, name, thread.curPC, (unsigned)thread.status, (unsigned)thread.waitType,
++            thread.waitID, thread.priority, thread.isCurrent ? 1U : 0U);
++      }
++   }
++#endif
++
+    static std::thread emuThread;
+    static void EmuFrame() {
+ #ifdef TIZENPSP_ARM_JIT
+@@ -1459,6 +1486,7 @@
+          [] { coreState = CORE_RUNNING_CPU; }));
+       tizenGuestMillis.store((unsigned)(CoreTiming::GetGlobalTimeUs() / 1000));
+       tizenActualFlips.store((unsigned)__DisplayGetFlipCount());
++      ReportGuestError();
+ #else
+       PSP_RunLoopWhileState();
+ #endif

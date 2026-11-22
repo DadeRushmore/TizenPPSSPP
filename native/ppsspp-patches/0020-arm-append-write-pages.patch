@@ -1,0 +1,40 @@
+--- a/Common/CodeBlock.h
++++ b/Common/CodeBlock.h
+@@ -127,6 +127,22 @@
+ 			ProtectMemoryPages(writeStart_, sizeEstimate, MEM_PROT_READ | MEM_PROT_WRITE);
+ 		}
+ 	}
++
++#ifdef TIZENPSP_ARM_JIT
++	// Only for callers that append into the RW tail, never rewind into old code.
++	// EndWrite seals just the emitted prefix, so only its final partial page
++	// can need reopening. General BeginWrite remains necessary for decoder retries.
++	void BeginWriteAppend(size_t sizeEstimate) {
++		_dbg_assert_msg_(!writeStart_, "Can't nest BeginWrite calls");
++		if (PlatformIsWXExclusive()) {
++			writeStart_ = GetCodePtr();
++			writeEstimated_ = sizeEstimate > (size_t)(region_size - (writeStart_ - region)) ?
++				region_size - (writeStart_ - region) : sizeEstimate;
++			if ((uintptr_t)writeStart_ % GetMemoryProtectPageSize() != 0)
++				ProtectMemoryPages(writeStart_, 1, MEM_PROT_READ | MEM_PROT_WRITE);
++		}
++	}
++#endif
+ 
+ 	// In case you now know your original estimate is wrong.
+ 	void ContinueWrite(size_t sizeEstimate = 1) {
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -82,7 +82,12 @@
+ 	size_t sizeEstimate = 0;
+ 	for (int i = 0; i < count; ++i)
+ 		sizeEstimate += instructions[i].op == IROp::Vec4VfpuDot ? 96 : 32;
++#ifdef TIZENPSP_ARM_JIT
++	// CPU blocks only append; unlike vertex-decoder retries they never rewind.
++	BeginWriteAppend(sizeEstimate);
++#else
+ 	BeginWrite(std::min(GetSpaceLeft(), sizeEstimate));
++#endif
+ 
+ 	bool wroteCheckedOffset = false;
+ 	if (jo.enableBlocklink && !jo.useBackJump) {

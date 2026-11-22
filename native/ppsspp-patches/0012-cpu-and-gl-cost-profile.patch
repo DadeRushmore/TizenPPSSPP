@@ -1,0 +1,157 @@
+--- a/GPU/GPUCommon.cpp
++++ b/GPU/GPUCommon.cpp
+@@ -1,4 +1,7 @@
+ #include "ppsspp_config.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #include <algorithm>  // std::remove
+ 
+@@ -950,6 +953,9 @@
+ 
+ // This is now called when coreState == CORE_RUNNING_GE, in addition to from the various sceGe commands.
+ DLResult GPUCommon::ProcessDLQueue() {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::GE);
++#endif
+ 	if (!resumingFromDebugBreak_) {
+ 		startingTicks = CoreTiming::GetTicks(currentMIPS);
+ 		cyclesExecuted = 0;
+--- a/GPU/GLES/DrawEngineGLES.cpp
++++ b/GPU/GLES/DrawEngineGLES.cpp
+@@ -16,6 +16,9 @@
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
+ 
+ #include <algorithm>
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #include "Common/LogReporting.h"
+ 
+@@ -233,6 +236,9 @@
+ 	if (!numDrawVerts_) {
+ 		return;
+ 	}
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::DrawSubmit);
++#endif
+ 	PROFILE_THIS_SCOPE("flush");
+ 	FrameData &frameData = frameData_[render_->GetCurFrame()];
+ 	VShaderID vsid;
+--- a/GPU/GLES/TextureCacheGLES.cpp
++++ b/GPU/GLES/TextureCacheGLES.cpp
+@@ -16,6 +16,9 @@
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
+ 
+ #include <cstring>
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #include "ext/xxhash.h"
+ #include "Common/Common.h"
+@@ -202,6 +205,9 @@
+ }
+ 
+ void TextureCacheGLES::BuildTexture(TexCacheEntry *const entry) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::TextureBuild);
++#endif
+ 	BuildTexturePlan plan;
+ 	if (!PrepareBuildTexture(plan, entry)) {
+ 		// We're screwed?
+--- a/GPU/Common/SoftwareTransformCommon.cpp
++++ b/GPU/Common/SoftwareTransformCommon.cpp
+@@ -16,6 +16,9 @@
+ // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
+ 
+ #include <algorithm>
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ #include <cmath>
+ 
+ #include "Common/CPUDetect.h"
+@@ -139,6 +142,9 @@
+ }
+ 
+ SoftwareTransformAction RunSoftwareTransform(SoftwareTransformParams &params, int prim, u32 vertType, const DecVtxFormat &decVtxFormat, int numDecodedVerts, int vertsSize, int vertexCount, u16 *&inds, int indsSize, SoftwareTransformResult *result) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::SoftwareTransform);
++#endif
+ 	// These primitive are not handled.
+ 	_dbg_assert_(prim != GE_PRIM_KEEP_PREVIOUS && prim != GE_PRIM_TRIANGLE_FAN && prim != GE_PRIM_TRIANGLE_STRIP && prim != GE_PRIM_LINE_STRIP);
+ 
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -21,6 +21,9 @@
+ 
+ #include "GLQueueRunner.h"
+ #include "GLRenderManager.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_gl_profile.h"
++#endif
+ #include "DataFormatGL.h"
+ 
+ // These are the same value, alias for simplicity.
+@@ -183,12 +186,18 @@
+ #endif
+ 
+ 	CHECK_GL_ERROR_IF_DEBUG();
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope initProfile(TizenProfilePhase::GLInit);
++#endif
+ 	glActiveTexture(GL_TEXTURE0);
+ 	GLuint boundTexture = (GLuint)-1;
+ 	bool allocatedTextures = false;
+ 
+ 	for (size_t i = 0; i < steps.size(); i++) {
+ 		const GLRInitStep &step = steps[i];
++#ifdef TIZENPSP_ARM_JIT
++		TizenProfileScope commandProfile(TizenInitProfile(step.stepType));
++#endif
+ 		switch (step.stepType) {
+ 		case GLRInitStepType::CREATE_TEXTURE:
+ 		{
+@@ -858,6 +867,9 @@
+ }
+ 
+ void GLQueueRunner::PerformBlit(const GLRStep &step) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::GLCopy);
++#endif
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 	// Without FBO_ARB / GLES3, this will collide with bind_for_read, but there's nothing
+ 	// in ES 2.0 that actually separate them anyway of course, so doesn't matter.
+@@ -907,6 +919,9 @@
+ }
+ 
+ void GLQueueRunner::PerformRenderPass(const GLRStep &step, bool first, bool last, GLQueueProfileContext &profile) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::GLPass);
++#endif
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 
+ 	PerformBindFramebufferAsRenderTarget(step);
+@@ -985,6 +1000,9 @@
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 	auto &commands = step.commands;
+ 	for (const auto &c : commands) {
++#ifdef TIZENPSP_ARM_JIT
++		TizenProfileScope commandProfile(TizenRenderProfile(c.cmd));
++#endif
+ #ifdef _DEBUG
+ 		if (profile.enabled) {
+ 			if ((size_t)c.cmd < ARRAY_SIZE(profile.commandCounts)) {
+@@ -1594,6 +1612,9 @@
+ }
+ 
+ void GLQueueRunner::PerformCopy(const GLRStep &step) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope tizenProfile(TizenProfilePhase::GLCopy);
++#endif
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 	GLuint srcTex = 0;
+ 	GLuint dstTex = 0;

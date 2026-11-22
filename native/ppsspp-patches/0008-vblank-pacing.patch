@@ -1,0 +1,77 @@
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -48,6 +48,13 @@
+ #include "Core/SaveState.h"
+ #include "Core/System.h"
+ #include "Core/CoreTiming.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_frame_pacing.h"
++static std::atomic<unsigned> tizenGuestMillis{0}, tizenActualFlips{0}, tizenFoldedFlips{0};
++extern "C" unsigned retro_tizenpsp_guest_millis() { return tizenGuestMillis.load(); }
++extern "C" unsigned retro_tizenpsp_actual_flips() { return tizenActualFlips.load(); }
++extern "C" unsigned retro_tizenpsp_folded_flips() { return tizenFoldedFlips.load(); }
++#endif
+ #include "Core/HW/Display.h"
+ #include "Core/CwCheat.h"
+ #include "Core/ELF/ParamSFO.h"
+@@ -1435,7 +1442,19 @@
+          gpu->BeginHostFrame(displayLayoutConfig);
+       }
+ 
++#ifdef TIZENPSP_ARM_JIT
++      // A game can change its display buffer before vblank. Such an early
++      // NEXTFRAME must not consume an entire 16.68 ms frontend tick.
++      tizenFoldedFlips.fetch_add(TizenRunToVblank(
++         [] { return __DisplayGetNumVblanks(); },
++         [] { PSP_RunLoopWhileState(); },
++         [] { return coreState == CORE_NEXTFRAME; },
++         [] { coreState = CORE_RUNNING_CPU; }));
++      tizenGuestMillis.store((unsigned)(CoreTiming::GetGlobalTimeUs() / 1000));
++      tizenActualFlips.store((unsigned)__DisplayGetFlipCount());
++#else
+       PSP_RunLoopWhileState();
++#endif
+       switch (coreState) {
+       case CORE_NEXTFRAME:
+       case CORE_POWERDOWN:
+--- a/Core/HLE/sceDisplay.cpp
++++ b/Core/HLE/sceDisplay.cpp
+@@ -519,6 +519,7 @@
+ 
+ 	// Lag sync paces emulation already. A wait here too would be out of phase with it, and it would race
+ 	// to catch up afterwards.
++#ifndef TIZENPSP_ARM_JIT
+ 	if (curFrameTime < nextFrameTime && throttle && !lagSyncScheduled) {
+ 		// If time gap is huge just jump (somebody fast-forwarded)
+ 		if (nextFrameTime - curFrameTime > 2*scaledTimestep) {
+@@ -536,11 +537,17 @@
+ 		}
+ 	}
+ 
++#endif
+ 	lastFrameTime = nextFrameTime;
+ 	wasPaused = false;
+ }
+ 
+ static void DoFrameIdleTiming() {
++#ifdef TIZENPSP_ARM_JIT
++	// Tizen's frontend timer and bounded GL queue pace the core. Sleeping here
++	// adds a second clock, including on static/loading screens.
++	return;
++#endif
+ 	PROFILE_THIS_SCOPE("timing");
+ 	if (!FrameTimingThrottled() || !g_Config.bEnableSound || wasPaused || lagSyncScheduled) {
+ 		return;
+@@ -640,6 +647,12 @@
+ 		// Gotta flip even if sceDisplaySetFramebuf was not called.
+ 		__DisplayFlip(cyclesLate);
+ 	}
++#ifdef TIZENPSP_ARM_JIT
++	// Always hand a vblank back to the fixed-rate frontend, even when the
++	// display is unchanged or drawing is skipped. Preserve stop/error states.
++	if (coreState == CORE_RUNNING_CPU || coreState == CORE_REENTER_DISPATCH)
++		Core_NextFrame();
++#endif
+ }
+ 
+ static void NotifyUserIfSlow() {

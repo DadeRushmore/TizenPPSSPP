@@ -1,0 +1,337 @@
+{
+  "app": "TizenPPSSPP",
+  "version": "0.24.4",
+  "tag": "v0.24.4-public-source.20261122",
+  "date": "2026-11-22",
+  "scope": "public source repository; not an installable package",
+  "project": "app/TizenPSP.csproj",
+  "frozen_private_package_sha256": "89eb6bb3fe8a024dd5beed29c8f31a2aba22272c4b957a7428e02cacf2b19522",
+  "binary_release": "withheld pending listed review items",
+  "licenses": "PPSSPP GPL-2.0-or-later; frontend GPL-2.0; FFmpeg LGPL-2.1-or-later and vendored dependencies under their retained notices.",
+  "remaining_binary_release_checks": [
+    "Establish the exact historical source corresponding to the retained interpreter binary, not just the newer JIT source/patch stack.",
+    "Complete build/dependency and native runtime correspondence audit before publishing compiled core binaries.",
+    "Restore runtime assets only after recording their provenance and required notices; rebuild omitted executables from their corresponding sources."
+  ],
+  "excluded_binary_paths": [
+    "vendor/ppsspp/ext/SPIRV-Cross/shaders-hlsl/asm/lib/export-calls-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/shaders-hlsl/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/shaders-hlsl/asm/lib/multi-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/shaders/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/shaders/asm/lib/multi-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/shaders-hlsl/asm/lib/export-calls-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/shaders-hlsl/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/shaders-hlsl/asm/lib/multi-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/shaders/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/shaders/asm/lib/multi-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/opt/shaders-hlsl/asm/lib/export-calls-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/opt/shaders-hlsl/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/opt/shaders-hlsl/asm/lib/multi-export.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/opt/shaders/asm/lib/global-array.asm.lib",
+    "vendor/ppsspp/ext/SPIRV-Cross/reference/opt/shaders/asm/lib/multi-export.asm.lib",
+    "app/res/libtizenpsp_corebridge.so",
+    "app/res/libtizenpsp_glview.so",
+    "app/res/libtizenpsp_triangle.so",
+    "app/res/libtizenpsp_triangle_v010.so",
+    "app/res/ppsspp_libretro-arm32-jit.so",
+    "app/res/ppsspp_libretro-arm32.so"
+  ],
+  "frozen_baseline_date": "2026-11-16",
+  "publication_exclusions": [
+    {
+      "path": "app/res/PPSSPP/flash0/font/jpn0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "d363cec75fecfafd1511e370e48c748c30199c694b83a4026be34d799b192917"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/kr0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "6b0b3a8be9e709d6af02223d077675e1530f9879f42656377a9d8d42e2614333"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "1184f16bc89bad1fea49093806784470281af54f279b57ef0378ce33e6603870"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn1.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "0cb72bdce33780b78596001fdc6842c244aac06e813fddf28e3437e4db45dd5b"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn10.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ff8fcdebca739eaa81c07caabd78b3e3eafb89cac0e68caf7aaf7a2b25514e85"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn11.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ebb94efd7d18143d6c6d54ae7aa5cc801d8c56dc7ca613c779cc60dc8b640a16"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn12.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c71f3dee57b8a105a88791dd041a008adb918b14a3892a1b18ed6a63f721201a"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn13.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "25b0efa79cf1b6656b35356483ad2b1191626550d59b5943ed681e82b945bd73"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn14.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "bc2c9389ac33f120b4be4fd3efc467de12fd886ec147969a4309ea270ccc1da3"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn15.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "4ab43137ebed97d8bbec829b32d4b343f9895e0b14ec1c884c1b44dfa35d5204"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn2.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ecfdfc8c7f1ee367dda81ff3177af626b5bf64014315ce0c389903c40964b4bf"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn3.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "82bf8f0b60fd7e513560b29c52f6c721ade05910a144704c17f78aba298d9b08"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn4.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "250babd8a242d7eaaa84284c78d5e2273b29e61d0d8c01b65414e3248d7c1164"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn5.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e30b45662d37516c590ca070c831b44a6883587e223abd28082cb017623474f7"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn6.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "a0fb14123ceb1ef81cb230cbf0688de594d0725de234a2ad710cd9b89391c7e9"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn7.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "9a4d35eeeee93fe8b5434e8dff79dabf7bbd914ad0d6461fb60d36eb178bf2c8"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn8.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c8620bdd244585bbf993a82903168f6ec8464d4cbcad238d4e0ca5623c1ba3c1"
+    },
+    {
+      "path": "app/res/PPSSPP/flash0/font/ltn9.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e250f2782e0c72707ce16f73331e2604daa84c488c8b9c959e2296867c1710bf"
+    },
+    {
+      "path": "app/res/PPSSPP/ppge_atlas.zim",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "3ab7fcf6956d0281ada94d501fc6d1cfa8fc034f139e25fed6c829f723d92a95"
+    },
+    {
+      "path": "vendor/ppsspp/assets/asciifont_atlas.zim",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "1020b3cc03eced719dceec715b547f849b5594c4b7085143eab50ed3e3d87afc"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/jpn0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "d363cec75fecfafd1511e370e48c748c30199c694b83a4026be34d799b192917"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/kr0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "6b0b3a8be9e709d6af02223d077675e1530f9879f42656377a9d8d42e2614333"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn0.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "1184f16bc89bad1fea49093806784470281af54f279b57ef0378ce33e6603870"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn1.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "0cb72bdce33780b78596001fdc6842c244aac06e813fddf28e3437e4db45dd5b"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn10.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ff8fcdebca739eaa81c07caabd78b3e3eafb89cac0e68caf7aaf7a2b25514e85"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn11.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ebb94efd7d18143d6c6d54ae7aa5cc801d8c56dc7ca613c779cc60dc8b640a16"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn12.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c71f3dee57b8a105a88791dd041a008adb918b14a3892a1b18ed6a63f721201a"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn13.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "25b0efa79cf1b6656b35356483ad2b1191626550d59b5943ed681e82b945bd73"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn14.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "bc2c9389ac33f120b4be4fd3efc467de12fd886ec147969a4309ea270ccc1da3"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn15.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "4ab43137ebed97d8bbec829b32d4b343f9895e0b14ec1c884c1b44dfa35d5204"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn2.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "ecfdfc8c7f1ee367dda81ff3177af626b5bf64014315ce0c389903c40964b4bf"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn3.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "82bf8f0b60fd7e513560b29c52f6c721ade05910a144704c17f78aba298d9b08"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn4.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "250babd8a242d7eaaa84284c78d5e2273b29e61d0d8c01b65414e3248d7c1164"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn5.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e30b45662d37516c590ca070c831b44a6883587e223abd28082cb017623474f7"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn6.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "a0fb14123ceb1ef81cb230cbf0688de594d0725de234a2ad710cd9b89391c7e9"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn7.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "9a4d35eeeee93fe8b5434e8dff79dabf7bbd914ad0d6461fb60d36eb178bf2c8"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn8.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c8620bdd244585bbf993a82903168f6ec8464d4cbcad238d4e0ca5623c1ba3c1"
+    },
+    {
+      "path": "vendor/ppsspp/assets/flash0/font/ltn9.pgf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e250f2782e0c72707ce16f73331e2604daa84c488c8b9c959e2296867c1710bf"
+    },
+    {
+      "path": "vendor/ppsspp/assets/font_atlas.zim",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "5929677cbfb28fd9040f6c16cf479d5ac54b205f5df180d100d3b1a210df0353"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Inconsolata-Regular.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e0267abf9d734e2b9f766f8cb7a496b552c57cdfeacfa0efdc5bfd21940ae145"
+    },
+    {
+      "path": "vendor/ppsspp/assets/ppge_atlas.zim",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "3ab7fcf6956d0281ada94d501fc6d1cfa8fc034f139e25fed6c829f723d92a95"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_Condensed-Bold.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "da69d6f3193e279c892451c17f7e4926aecd4aeaf7300171ddb44c70551260ca"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_Condensed-Italic.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "9fe1c2390bbce960ebba517eec37659fdd1c7a59dd256da6274b5b4d88509575"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_Condensed-Light.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "3f1a3f85852fafc3a198904f6efc1fce5ae1013775ac40da35bd52ec82d38e41"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_Condensed-Regular.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "d8e6f7c5a1356d41dd82b0c00219febd21c791cc5cd1ecf8a0323cbeafe6496c"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_SemiCondensed-Bold.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "9546beff853a4463ca5580b94c08417c4ad93b764178fa693a57dd9724c62cc4"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_SemiCondensed-Italic.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "a0be8c6896ca6a3cc80826ef4f1bb6bf1b76f70ac96e175ba14380e91b1d484d"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_SemiCondensed-Light.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "e66b579b05c6369013e6f1709403517d41b0c54126d1d7bbd000ad64b11602cd"
+    },
+    {
+      "path": "vendor/ppsspp/assets/Roboto_SemiCondensed-Regular.ttf",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "59a71a1b097ac011567ab34d8ae5e19c5ddd69eeadfdbf29c0a575ceb2cf70f3"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_achievement_unlocked.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c95f53b1279684c8db5f2b518a63675db3713b3c097c65fd2ff280baf29ffd34"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_back.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "8e6550b975a34511788dbeaacae47c9be6c89c967052c12342c6cc32f5650e4c"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_confirm.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "c2fdb1d1e6e677883f13eb866a1d83b8f67cc94f00aec21163612f61afefb693"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_leaderbord_submitted.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "61e780e220798f49d15e6d9eb85634a6e21f05765ed2a7aec682e196f4edda7d"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_select.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "6d108dcae03c5a4ea04136b972c7c202b8b5013f4771791f0cb7348db0051dc1"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_toggle_off.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "5d3c60e5fd12658ffc562f14331b7d0c962b818bee4a38aa9c928d2f08fb4f6b"
+    },
+    {
+      "path": "vendor/ppsspp/assets/sfx_toggle_on.wav",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "f56b389dde4da2ad6f65f3ac136c3d9c1a681aa76c3ca531e984410b261b4810"
+    },
+    {
+      "path": "vendor/ppsspp/ext/vulkan/libvulkan.so.1.3.236",
+      "reason": "compiled executable or static archive",
+      "sha256": "947940a9d5578745c8a68562173a299380fbc5c65ec1c613d116022953a28e70"
+    },
+    {
+      "path": "vendor/ppsspp/gradle/wrapper/gradle-wrapper.jar",
+      "reason": "prebuilt runtime/tool/media asset; omitted from this source edition",
+      "sha256": "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7"
+    },
+    {
+      "path": "vendor/ppsspp/Tools/SaveTool/kernelcall.prx",
+      "reason": "compiled executable or static archive",
+      "sha256": "82ccb19aa67b845e98abb33baa3f520ba2e6eee2fe43379d070d15581f20d4d4"
+    }
+  ]
+}

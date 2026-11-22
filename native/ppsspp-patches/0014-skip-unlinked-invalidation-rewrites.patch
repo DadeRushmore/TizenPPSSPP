@@ -1,0 +1,53 @@
+--- a/Core/MIPS/IR/IRNativeCommon.h
++++ b/Core/MIPS/IR/IRNativeCommon.h
+@@ -72,6 +72,10 @@
+ 	u32 startPC = 0;
+ 	int entryOffset = 0;
+ 	int checkedOffset = 0;
++#ifdef TIZENPSP_ARM_JIT
++	// Conservative lifetime flag: source invalidation never clears this.
++	bool tizenHasIncomingBranch = false;
++#endif
+ 	std::vector<IRNativeBlockExit> exits;
+ 	// Code offset of each IR instruction, only kept when profiling.
+ 	std::vector<int> irOffsets;
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -207,6 +207,9 @@
+ 
+ 	int exitStart = (int)GetOffset(GetCodePointer());
+ 	if (block_num >= 0 && jo.enableBlocklink && nativeBlock && nativeBlock->checkedOffset != 0) {
++#ifdef TIZENPSP_ARM_JIT
++		nativeBlocks_[block_num].tizenHasIncomingBranch = true;
++#endif
+ 		B(GetBasePtr() + nativeBlock->checkedOffset);
+ #ifdef TIZENPSP_ARM_JIT
+ 		TizenJitExit(true);
+@@ -244,6 +247,9 @@
+ 		}
+ 
+ 		ARMXEmitter emitter(writable);
++#ifdef TIZENPSP_ARM_JIT
++		nativeBlocks_[block_num].tizenHasIncomingBranch = true;
++#endif
+ 		emitter.B(GetBasePtr() + nativeBlock->checkedOffset);
+ 		int bytesWritten = (int)(emitter.GetWritableCodePtr() - writable);
+ 		_dbg_assert_(bytesWritten <= MIN_BLOCK_EXIT_LEN);
+@@ -339,6 +345,17 @@
+ 	TizenJitInvalidation();
+ #endif
+ 	const IRNativeBlock *nativeBlock = GetNativeBlock(block_num);
++#ifdef TIZENPSP_ARM_JIT
++	// Dispatcher entries are removed by IRJit's block-shadow invalidation.
++	// Only a direct branch can enter this block again without that lookup.
++	// Returning from a helper into the current block's body is unchanged by
++	// either path: the old invalidation only rewrote the entry, not the body.
++	if (!nativeBlock->tizenHasIncomingBranch) {
++		TizenJitInvalidationSkipped();
++		EraseAllLinks(block_num);
++		return;
++	}
++#endif
+ 	int offset = nativeBlock->entryOffset;
+ 	u8 *writable = GetWritablePtrFromCodePtr(GetBasePtr()) + offset;
+ 

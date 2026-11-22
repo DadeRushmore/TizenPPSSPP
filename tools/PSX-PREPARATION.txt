@@ -1,0 +1,37 @@
+TizenPSX - Prepare games & covers
+
+Run Prepare-PSX.cmd. Choose the downloaded pack and a separate output folder
+named PSX, then click Prepare games & download covers.
+
+Requires Python 3.10+ (including Tk) and the installed Windows 7-Zip utility.
+No pip packages are needed. Internet is used only for the public cover index
+and selected cover images. Game data is never uploaded.
+
+The tool:
+- Leaves the downloaded pack unchanged.
+- Extracts 7z, RAR and ZIP game archives using installed 7-Zip, with CRC checking.
+- Copies already-extracted game folders.
+- Excludes emulator/plugin/BIOS bundles and rejects executable archive payloads.
+- Preserves CUE/BIN, CCD/IMG/SUB and MDS disc companions.
+- Corrects CUE path spelling/separators for the TV's case-sensitive filesystem.
+- Exposes copied MDF data as BIN with its original MDS sidecar. Disc bytes are
+  unchanged; the current PCSX core locates the MDS by the shared basename.
+- Places cover.png or cover.jpg beside each launchable disc, as TizenPSX expects.
+- Preserves existing covers and reports ambiguous matches instead of guessing.
+- Resumes completed imports and refuses to overwrite unrelated/changed folders.
+
+Copy the completed PSX folder to the USB drive root. In TizenPSX refresh the
+USB library. Select CUE files when present; leave their track files together.
+No archive support or emulator update is required for the prepared library.
+
+Review TizenPSX-preparation-report.csv and .json in the output folder for
+missing covers or disc problems. Preparation does not guarantee game compatibility
+or test gameplay. BIN-only source images are not given invented track layouts.
+
+Command line preview:
+python psx_pack_prepare.py --source "D:\Downloaded pack" --destination "D:\PSX"
+Prepare including covers:
+python psx_pack_prepare.py --source "D:\Downloaded pack" --destination "D:\PSX" --apply
+
+Cover source: https://thumbnails.libretro.com/Sony%20-%20PlayStation/Named_Boxarts/
+Game images, BIOS files and artwork are not bundled with this tool.

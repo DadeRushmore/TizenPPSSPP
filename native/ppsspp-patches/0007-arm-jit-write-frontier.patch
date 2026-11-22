@@ -1,0 +1,40 @@
+--- a/Common/CodeBlock.h
++++ b/Common/CodeBlock.h
+@@ -9,6 +9,9 @@
+ #include "Common/CommonTypes.h"
+ #include "Common/Log.h"
+ #include "Common/MemoryUtil.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #if PPSSPP_PLATFORM(SWITCH)
+ #include <cstdio>
+@@ -142,6 +145,19 @@
+ 		if (PlatformIsWXExclusive() && writeStart_ != nullptr) {
+ 			const uint8_t *end = GetCodePtr();
+ 			size_t sz = end - writeStart_;
++#ifdef TIZENPSP_ARM_JIT
++			// This target appends blocks with linking disabled and a page-separated
++			// dispatcher. Future pages must remain RW: protecting an unused estimate
++			// can make a later underestimated block write into an RX page.
++			if (sz > writeEstimated_)
++				TizenJitWriteEstimate(sz);
++			// An empty write may have reopened the page containing preceding code.
++			// At a page boundary there is no preceding code on that page to restore.
++			if (sz == 0 && (uintptr_t)writeStart_ % GetMemoryProtectPageSize() != 0)
++				sz = 1;
++			if (sz != 0)
++				ProtectMemoryPages(writeStart_, sz, MEM_PROT_READ | MEM_PROT_EXEC);
++#else
+ 			if (sz > writeEstimated_)
+ 				WARN_LOG(Log::JIT, "EndWrite(): Estimated %d bytes, wrote %d", (int)writeEstimated_, (int)sz);
+ 			// If we protected and wrote less, we may need to unprotect.
+@@ -149,6 +165,7 @@
+ 			if (sz < writeEstimated_)
+ 				sz = writeEstimated_;
+ 			ProtectMemoryPages(writeStart_, sz, MEM_PROT_READ | MEM_PROT_EXEC);
++#endif
+ 			writeStart_ = nullptr;
+ 		}
+ 	}

@@ -1,0 +1,149 @@
+--- a/Core/MIPS/IR/IRNativeCommon.h
++++ b/Core/MIPS/IR/IRNativeCommon.h
+@@ -79,7 +79,13 @@
+ 
+ // The native code space of every backend. Blocks have to reach the dispatcher at its start, and
+ // ARM32 branches reach 32 MB.
++#ifdef TIZENPSP_ARM_JIT
++// Leave 64 KiB of margin for ARM's signed 24-bit branch displacement and PC bias.
++constexpr int NATIVE_CODE_SPACE_SIZE = 32 * 1024 * 1024 - 64 * 1024;
++static_assert(NATIVE_CODE_SPACE_SIZE + 8 < (1 << 25));
++#else
+ constexpr int NATIVE_CODE_SPACE_SIZE = 24 * 1024 * 1024;
++#endif
+ 
+ class IRNativeBackend {
+ public:
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -58,6 +58,9 @@
+ 
+ 	// Since we store the offset, this is as big as it can be.
+ 	AllocCodeSpace(NATIVE_CODE_SPACE_SIZE);
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitCacheUsage(0, NATIVE_CODE_SPACE_SIZE);
++#endif
+ 
+ 	regs_.Init(this);
+ }
+@@ -193,6 +196,7 @@
+ 	compilingBlockNum_ = -1;
+ #ifdef TIZENPSP_ARM_JIT
+ 	TizenJitCompiled(startPC, len);
++	TizenJitCacheUsage(GetOffset(GetCodePtr()), NATIVE_CODE_SPACE_SIZE);
+ #endif
+ 	return true;
+ }
+@@ -323,6 +327,7 @@
+ void ArmJitBackend::ClearAllBlocks() {
+ #ifdef TIZENPSP_ARM_JIT
+ 	TizenJitCacheClear();
++	TizenJitCacheUsage(0, NATIVE_CODE_SPACE_SIZE);
+ #endif
+ 	ClearCodeSpace(jitStartOffset_);
+ 	FlushIcacheSection(region + jitStartOffset_, region + region_size - jitStartOffset_);
+--- a/Core/MIPS/IR/IRNativeCommon.cpp
++++ b/Core/MIPS/IR/IRNativeCommon.cpp
+@@ -593,6 +593,9 @@
+ }
+ 
+ void IRNativeJit::RunLoopUntil(u64 globalticks) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenPerfScope dispatchTime(TizenPerfPhase::Dispatch);
++#endif
+ 	if constexpr (enableDebugStats || enableDebugProfiler) {
+ 		LogDebugStats();
+ 	}
+--- a/Common/GPU/OpenGL/GLRenderManager.cpp
++++ b/Common/GPU/OpenGL/GLRenderManager.cpp
+@@ -1,5 +1,8 @@
+ #include "ppsspp_config.h"
+ #include "GLRenderManager.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ #include "Common/GPU/OpenGL/GLFeatures.h"
+ #include "Common/GPU/thin3d.h"
+ #include "Common/Thread/ThreadUtil.h"
+@@ -151,6 +154,9 @@
+ 		// Pop a task off the queue and execute it. Exiting this loop is done with a special EXIT task,
+ 		// to keep things uniform.
+ 		{
++#ifdef TIZENPSP_ARM_JIT
++			TizenPerfScope queueWait(TizenPerfPhase::QueueWait);
++#endif
+ 			std::unique_lock<std::mutex> lock(pushMutex_);
+ 			pushCondVar_.wait(lock, [this] { return !renderThreadQueue_.empty(); });
+ 			task = renderThreadQueue_.front();
+@@ -344,6 +350,9 @@
+ 
+ 	frameIdGen_++;
+ 	{
++#ifdef TIZENPSP_ARM_JIT
++		TizenPerfScope frameWait(TizenPerfPhase::FrameWait);
++#endif
+ 		std::unique_lock<std::mutex> lock(frameData.fenceMutex);
+ 		VLOG("PUSH: BeginFrame (curFrame = %d, readyForFence = %d, time=%0.3f)", curFrame, (int)frameData.readyForFence, time_now_d());
+ 		while (!frameData.readyForFence) {
+@@ -419,6 +428,9 @@
+ 
+ // Render thread. Returns true if the caller should handle a swap.
+ bool GLRenderManager::Run(GLRRenderThreadTask &task) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenPerfScope glWork(TizenPerfPhase::GLWork);
++#endif
+ 	_dbg_assert_(task.frame >= 0);
+ 
+ 	GLFrameData &frameData = frameData_[task.frame];
+@@ -552,6 +564,9 @@
+ 	}
+ 
+ 	{
++#ifdef TIZENPSP_ARM_JIT
++		TizenPerfScope syncWait(TizenPerfPhase::SyncWait);
++#endif
+ 		std::unique_lock<std::mutex> lock(syncMutex_);
+ 		// Wait for the flush to be hit, since we're syncing.
+ 		while (!syncDone_) {
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -1,4 +1,7 @@
+ #include "ppsspp_config.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ 
+ #include "Common/GPU/OpenGL/GLCommon.h"
+ #include "Common/GPU/OpenGL/GLDebugLog.h"
+@@ -1654,6 +1657,9 @@
+ }
+ 
+ void GLQueueRunner::PerformReadback(const GLRStep &pass) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenPerfScope readbackTime(TizenPerfPhase::Readback);
++#endif
+ 	using namespace Draw;
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 
+@@ -1721,6 +1727,9 @@
+ }
+ 
+ void GLQueueRunner::PerformReadbackImage(const GLRStep &pass) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenPerfScope readbackTime(TizenPerfPhase::Readback);
++#endif
+ 	readbackFormat_ = Draw::DataFormat::R8G8B8A8_UNORM;
+ 	readbackOk_ = false;
+ #ifndef USING_GLES2
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -630,6 +630,9 @@
+          g_Config.bIgnoreBadMemAccess = true;
+    }
+ 
++#ifdef TIZENPSP_ARM_JIT
++   TizenJitFastMemory(g_Config.bFastMemory);
++#endif
+    var.key = "ppsspp_io_timing_method";
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {

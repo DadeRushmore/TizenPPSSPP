@@ -1,0 +1,26 @@
+--- a/Core/MIPS/JitCommon/JitCommon.cpp
++++ b/Core/MIPS/JitCommon/JitCommon.cpp
+@@ -108,7 +108,9 @@
+ 	}
+ 
+ 	JitInterface *CreateNativeJit(MIPSState *mipsState) {
+-#if PPSSPP_ARCH(ARM)
++#if defined(TIZENPSP_NO_JIT)
++		return new MIPSComp::IRInterpreterJit(mipsState);
++#elif PPSSPP_ARCH(ARM)
+ 		return new MIPSComp::ArmIRJit(mipsState);
+ #elif PPSSPP_ARCH(ARM64)
+ 		return new MIPSComp::Arm64IRJit(mipsState);
+--- a/GPU/Common/VertexDecoderCommon.h
++++ b/GPU/Common/VertexDecoderCommon.h
+@@ -350,7 +350,9 @@
+ //
+ // that's it!
+ 
+-#if PPSSPP_ARCH(ARM)
++#if defined(TIZENPSP_NO_JIT)
++// Use the existing null vertex-decoder JIT implementation.
++#elif PPSSPP_ARCH(ARM)
+ #define VERTEXDECODER_JIT_BACKEND ArmGen::ARMXCodeBlock
+ #elif PPSSPP_ARCH(ARM64)
+ #define VERTEXDECODER_JIT_BACKEND Arm64Gen::ARM64CodeBlock

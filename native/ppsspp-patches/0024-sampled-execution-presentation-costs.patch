@@ -1,0 +1,155 @@
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -216,7 +216,7 @@
+ 
+ 	for (size_t i = 0; i < steps.size(); i++) {
+ 		const GLRInitStep &step = steps[i];
+-#ifdef TIZENPSP_ARM_JIT
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 1
+ 		TizenProfileScope commandProfile(TizenInitProfile(step.stepType));
+ #endif
+ 		switch (step.stepType) {
+@@ -240,6 +240,9 @@
+ 		}
+ 		case GLRInitStepType::BUFFER_SUBDATA:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLUpload);
++#endif
+ 			GLRBuffer *buffer = step.buffer_subdata.buffer;
+ 			glBindBuffer(buffer->target_, buffer->buffer_);
+ 			glBufferSubData(buffer->target_, step.buffer_subdata.offset, step.buffer_subdata.size, step.buffer_subdata.data);
+@@ -250,6 +253,9 @@
+ 		}
+ 		case GLRInitStepType::CREATE_PROGRAM:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLShader);
++#endif
+ 			CHECK_GL_ERROR_IF_DEBUG();
+ 			GLRProgram *program = step.create_program.program;
+ 			program->program = glCreateProgram();
+@@ -351,6 +357,9 @@
+ 		}
+ 		case GLRInitStepType::CREATE_SHADER:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLShader);
++#endif
+ 			CHECK_GL_ERROR_IF_DEBUG();
+ 			GLuint shader = glCreateShader(step.create_shader.stage);
+ 			step.create_shader.shader->shader = shader;
+@@ -408,6 +417,9 @@
+ 		}
+ 		case GLRInitStepType::TEXTURE_IMAGE:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLUpload);
++#endif
+ 			GLRTexture *tex = step.texture_image.texture;
+ 			CHECK_GL_ERROR_IF_DEBUG();
+ 			if (boundTexture != tex->texture) {
+@@ -465,6 +477,9 @@
+ 		}
+ 		case GLRInitStepType::TEXTURE_SUBIMAGE:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLUpload);
++#endif
+ 			GLRTexture *tex = step.texture_subimage.texture;
+ 			CHECK_GL_ERROR_IF_DEBUG();
+ 			if (boundTexture != tex->texture) {
+@@ -490,6 +505,9 @@
+ 		}
+ 		case GLRInitStepType::TEXTURE_FINALIZE:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLUpload);
++#endif
+ 			CHECK_GL_ERROR_IF_DEBUG();
+ 			GLRTexture *tex = step.texture_finalize.texture;
+ 			if (boundTexture != tex->texture) {
+@@ -1027,7 +1045,7 @@
+ 	CHECK_GL_ERROR_IF_DEBUG();
+ 	auto &commands = step.commands;
+ 	for (const auto &c : commands) {
+-#ifdef TIZENPSP_ARM_JIT
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 1
+ 		TizenProfileScope commandProfile(TizenRenderProfile(c.cmd));
+ #endif
+ #ifdef _DEBUG
+@@ -1410,6 +1428,9 @@
+ 		}
+ 		case GLRRenderCommand::DRAW:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLDraw);
++#endif
+ 			GLRInputLayout *layout = c.draw.inputLayout;
+ 			if (attrMask != layout->semanticsMask_) {
+ 				EnableDisableVertexArrays(attrMask, layout->semanticsMask_);
+@@ -1547,6 +1568,9 @@
+ 		}
+ 		case GLRRenderCommand::TEXTURE_SUBIMAGE:
+ 		{
++#if defined(TIZENPSP_ARM_JIT) && TIZENPSP_DETAILED_PROFILE == 2
++			TizenProfileScope workProfile(TizenProfilePhase::GLUpload);
++#endif
+ 			GLint slot = c.texture_subimage.slot;
+ 			if (slot != activeSlot) {
+ 				glActiveTexture(GL_TEXTURE0 + slot);
+--- a/Core/HLE/HLE.cpp
++++ b/Core/HLE/HLE.cpp
+@@ -1,3 +1,6 @@
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ // Copyright (c) 2012- PPSSPP Project.
+ 
+ // This program is free software: you can redistribute it and/or modify
+@@ -1091,6 +1094,9 @@
+ }
+ 
+ static void CallSyscallWithFlags(MIPSState *mips, const HLEFunction *info) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope hleProfile(TizenProfilePhase::HLE);
++#endif
+ 	// _dbg_assert_(g_stackSize == 0);
+ 	g_stackSize = 0;
+ 
+@@ -1131,6 +1137,9 @@
+ }
+ 
+ static void CallSyscallWithoutFlags(MIPSState *mips, const HLEFunction *info) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenProfileScope hleProfile(TizenProfilePhase::HLE);
++#endif
+ 	// _dbg_assert_(g_stackSize == 0);
+ 	g_stackSize = 0;
+ 
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -1872,6 +1872,9 @@
+ 
+ // Called every frame by retroarch.
+ void retro_run(void) {
++#ifdef TIZENPSP_ARM_JIT
++   TizenPerfScope hostRun(TizenPerfPhase::HostRun);
++#endif
+    if (g_pendingBoot) {
+       BootState state = PSP_InitUpdate(&g_bootErrorString);
+       switch (state) {
+@@ -1961,8 +1964,13 @@
+       EmuFrame();
+ 
+    VsyncSwapIntervalDetect();
++#ifdef TIZENPSP_ARM_JIT
++   { TizenPerfScope present(TizenPerfPhase::Present);ctx->SwapBuffers(); }
++   { TizenPerfScope audio(TizenPerfPhase::AudioOutput);upload_output_audio_buffer(); }
++#else
+    ctx->SwapBuffers();
+    upload_output_audio_buffer();
++#endif
+ }
+ 
+ unsigned retro_get_region(void) { return RETRO_REGION_NTSC; }

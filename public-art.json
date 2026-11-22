@@ -1,0 +1,92 @@
+[
+  {
+    "path": "app/res/themes/far-far-away.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/grand-tour.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/kombat.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/liberty-city.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/most-wanted.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/olympus.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/tekken.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/res/themes/vice-city.png",
+    "width": 960,
+    "height": 540,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  },
+  {
+    "path": "app/shared/res/TizenPSP.png",
+    "width": 256,
+    "height": 256,
+    "accent": [
+      67,
+      207,
+      211
+    ]
+  }
+]

@@ -1,0 +1,367 @@
+# PPSSPP ARM32 runtime imports; core is not executed
+# core_sha256=43af35a686c48473549aa6d76f49831c41b317be9d6e5cb835577c20da018bd8
+__gmon_start__			1
+calloc	GLIBC_2.4	libc.so.6	0
+free	GLIBC_2.4	libc.so.6	0
+strlen	GLIBC_2.4	libc.so.6	0
+strcmp	GLIBC_2.4	libc.so.6	0
+strcpy	GLIBC_2.4	libc.so.6	0
+strcat	GLIBC_2.4	libc.so.6	0
+snprintf	GLIBC_2.4	libc.so.6	0
+strtol	GLIBC_2.4	libc.so.6	0
+malloc	GLIBC_2.4	libc.so.6	0
+pthread_create	GLIBC_2.4	libpthread.so.0	0
+strtod	GLIBC_2.4	libc.so.6	0
+realloc	GLIBC_2.4	libc.so.6	0
+pthread_setspecific	GLIBC_2.4	libpthread.so.0	0
+__cxa_atexit	GLIBC_2.4	libc.so.6	0
+glDeleteFramebuffers			0
+glDeleteTextures			0
+glDeleteRenderbuffers			0
+glDeleteProgram			0
+glDeleteBuffers			0
+glGetIntegerv			0
+glGenFramebuffers			0
+glGenTextures			0
+glGenRenderbuffers			0
+glBindFramebuffer			0
+glBindTexture			0
+glTexImage2D			0
+glTexParameteri			0
+glFramebufferTexture2D			0
+glBindRenderbuffer			0
+glRenderbufferStorage			0
+glFramebufferRenderbuffer			0
+glCheckFramebufferStatus			0
+atanf	GLIBC_2.4	libm.so.6	0
+glCreateShader			0
+glShaderSource			0
+glCompileShader			0
+glGetShaderiv			0
+glCreateProgram			0
+glAttachShader			0
+glBindAttribLocation			0
+glLinkProgram			0
+glGetProgramiv			0
+glDeleteShader			0
+glGenBuffers			0
+glActiveTexture			0
+glGetBooleanv			0
+glIsEnabled			0
+glDisable			0
+glColorMask			0
+glGetFloatv			0
+glClearColor			0
+glClear			0
+glUseProgram			0
+glBindBuffer			0
+glBufferData			0
+glEnableVertexAttribArray			0
+glVertexAttribPointer			0
+glGetUniformLocation			0
+glUniform1i			0
+glUniformMatrix4fv			0
+glViewport			0
+glDrawArrays			0
+glEnable			0
+glGetShaderInfoLog			0
+memchr	GLIBC_2.4	libc.so.6	0
+strdup	GLIBC_2.4	libc.so.6	0
+setlocale	GLIBC_2.4	libc.so.6	0
+strftime	GLIBC_2.4	libc.so.6	0
+strchr	GLIBC_2.4	libc.so.6	0
+strrchr	GLIBC_2.4	libc.so.6	0
+__ctype_tolower_loc	GLIBC_2.4	libc.so.6	0
+strstr	GLIBC_2.4	libc.so.6	0
+time	GLIBC_2.4	libc.so.6	0
+__ctype_b_loc	GLIBC_2.4	libc.so.6	0
+vsnprintf	GLIBC_2.4	libc.so.6	0
+__ctype_toupper_loc	GLIBC_2.4	libc.so.6	0
+strtoul	GLIBC_2.4	libc.so.6	0
+localtime	GLIBC_2.4	libc.so.6	0
+fseeko64	GLIBC_2.4	libc.so.6	0
+lseek64	GLIBC_2.4	libpthread.so.0	0
+fopen64	GLIBC_2.4	libc.so.6	0
+setvbuf	GLIBC_2.4	libc.so.6	0
+open64	GLIBC_2.4	libpthread.so.0	0
+ftello64	GLIBC_2.4	libc.so.6	0
+fclose	GLIBC_2.4	libc.so.6	0
+close	GLIBC_2.4	libpthread.so.0	0
+ferror	GLIBC_2.4	libc.so.6	0
+fileno	GLIBC_2.4	libc.so.6	0
+ftruncate64	GLIBC_2.4	libc.so.6	0
+fread	GLIBC_2.4	libc.so.6	0
+read	GLIBC_2.4	libpthread.so.0	0
+fwrite	GLIBC_2.4	libc.so.6	0
+write	GLIBC_2.4	libpthread.so.0	0
+fflush	GLIBC_2.4	libc.so.6	0
+remove	GLIBC_2.4	libc.so.6	0
+rename	GLIBC_2.4	libc.so.6	0
+posix_fadvise64	GLIBC_2.4	libc.so.6	0
+mkdir	GLIBC_2.4	libc.so.6	0
+__errno_location	GLIBC_2.4	libpthread.so.0	0
+rmdir	GLIBC_2.4	libc.so.6	0
+chmod	GLIBC_2.4	libc.so.6	0
+utimes	GLIBC_2.4	libc.so.6	0
+posix_fallocate64	GLIBC_2.4	libc.so.6	0
+syscall	GLIBC_2.4	libc.so.6	0
+opendir	GLIBC_2.4	libc.so.6	0
+closedir	GLIBC_2.4	libc.so.6	0
+readdir64	GLIBC_2.4	libc.so.6	0
+dirfd	GLIBC_2.4	libc.so.6	0
+pthread_once	GLIBC_2.4	libpthread.so.0	0
+pthread_mutex_lock	GLIBC_2.4	libpthread.so.0	0
+pthread_mutex_unlock	GLIBC_2.4	libpthread.so.0	0
+pthread_getspecific	GLIBC_2.4	libpthread.so.0	0
+abort	GLIBC_2.4	libc.so.6	0
+pthread_key_create	GLIBC_2.4	libpthread.so.0	0
+__cxa_thread_atexit_impl			0
+strcasecmp	GLIBC_2.4	libc.so.6	0
+__isoc99_sscanf	GLIBC_2.7	libc.so.6	0
+strncasecmp	GLIBC_2.4	libc.so.6	0
+ldexpf	GLIBC_2.4	libm.so.6	0
+printf	GLIBC_2.4	libc.so.6	0
+puts	GLIBC_2.4	libc.so.6	0
+putchar	GLIBC_2.4	libc.so.6	0
+wmemchr	GLIBC_2.4	libc.so.6	0
+strncpy	GLIBC_2.4	libc.so.6	0
+ilogb	GLIBC_2.4	libm.so.6	0
+ldexp	GLIBC_2.4	libm.so.6	0
+lroundf	GLIBC_2.4	libm.so.6	0
+sched_yield	GLIBC_2.4	libc.so.6	0
+srand	GLIBC_2.4	libc.so.6	0
+rand	GLIBC_2.4	libc.so.6	0
+powf	GLIBC_2.4	libm.so.6	0
+pthread_self	GLIBC_2.4	libpthread.so.0	0
+strnlen	GLIBC_2.4	libc.so.6	0
+strncmp	GLIBC_2.4	libc.so.6	0
+localtime_r	GLIBC_2.4	libc.so.6	0
+usleep	GLIBC_2.4	libc.so.6	0
+strpbrk	GLIBC_2.4	libc.so.6	0
+atan2f	GLIBC_2.4	libm.so.6	0
+mktime	GLIBC_2.4	libc.so.6	0
+inet_ntop	GLIBC_2.4	libc.so.6	0
+inet_pton	GLIBC_2.4	libc.so.6	0
+setsockopt	GLIBC_2.4	libc.so.6	0
+socket	GLIBC_2.4	libc.so.6	0
+bind	GLIBC_2.4	libc.so.6	0
+getsockname	GLIBC_2.4	libc.so.6	0
+getsockopt	GLIBC_2.4	libc.so.6	0
+recv	GLIBC_2.4	libpthread.so.0	0
+recvfrom	GLIBC_2.4	libpthread.so.0	0
+send	GLIBC_2.4	libpthread.so.0	0
+sendto	GLIBC_2.4	libpthread.so.0	0
+accept	GLIBC_2.4	libpthread.so.0	0
+recvmsg	GLIBC_2.4	libpthread.so.0	0
+poll	GLIBC_2.4	libc.so.6	0
+getpeername	GLIBC_2.4	libc.so.6	0
+shutdown	GLIBC_2.4	libc.so.6	0
+connect	GLIBC_2.4	libpthread.so.0	0
+listen	GLIBC_2.4	libc.so.6	0
+sendmsg	GLIBC_2.4	libpthread.so.0	0
+select	GLIBC_2.4	libc.so.6	0
+fcntl	GLIBC_2.4	libpthread.so.0	0
+ioctl	GLIBC_2.4	libc.so.6	0
+gettimeofday	GLIBC_2.4	libc.so.6	0
+gmtime	GLIBC_2.4	libc.so.6	0
+timegm	GLIBC_2.4	libc.so.6	0
+difftime	GLIBC_2.4	libc.so.6	0
+wcslen	GLIBC_2.4	libc.so.6	0
+unlink	GLIBC_2.4	libc.so.6	0
+strtoll	GLIBC_2.4	libc.so.6	0
+modff	GLIBC_2.4	libm.so.6	0
+realpath	GLIBC_2.4	libc.so.6	0
+dlopen	GLIBC_2.4	libdl.so.2	0
+dlsym	GLIBC_2.4	libdl.so.2	0
+dlclose	GLIBC_2.4	libdl.so.2	0
+llround	GLIBC_2.4	libm.so.6	0
+getenv	GLIBC_2.4	libc.so.6	0
+exit	GLIBC_2.4	libc.so.6	0
+asinf	GLIBC_2.4	libm.so.6	0
+longjmp	GLIBC_2.4	libpthread.so.0	0
+_setjmp	GLIBC_2.4	libc.so.6	0
+strtoull	GLIBC_2.4	libc.so.6	0
+statvfs64	GLIBC_2.4	libc.so.6	0
+strerror	GLIBC_2.4	libc.so.6	0
+system	GLIBC_2.4	libpthread.so.0	0
+getcwd	GLIBC_2.4	libc.so.6	0
+readlink	GLIBC_2.4	libc.so.6	0
+vsprintf	GLIBC_2.4	libc.so.6	0
+glGetString			0
+glGetError			0
+eglQueryString			0
+eglGetCurrentDisplay			0
+glGetShaderPrecisionFormat			0
+eglGetProcAddress			0
+glBufferSubData			0
+glPixelStorei			0
+glTexSubImage2D			0
+glCompressedTexImage2D			0
+glGenerateMipmap			0
+glGetProgramInfoLog			0
+glDepthMask			0
+glDepthFunc			0
+glScissor			0
+glTexParameterf			0
+glDepthRangef			0
+glStencilFunc			0
+glStencilOp			0
+glStencilMask			0
+glUniform1iv			0
+glUniform1f			0
+glFrontFace			0
+glCullFace			0
+glBlendEquationSeparate			0
+glBlendFuncSeparate			0
+glBlendColor			0
+glDisableVertexAttribArray			0
+glDrawElements			0
+glClearStencil			0
+glClearDepthf			0
+glUniform3iv			0
+glUniform4iv			0
+glUniform2iv			0
+glUniform3fv			0
+glUniform4fv			0
+glUniform2fv			0
+glReadPixels			0
+setenv	GLIBC_2.4	libc.so.6	0
+perror	GLIBC_2.4	libc.so.6	0
+getaddrinfo	GLIBC_2.4	libc.so.6	0
+freeaddrinfo	GLIBC_2.4	libc.so.6	0
+gai_strerror	GLIBC_2.4	libc.so.6	0
+getifaddrs	GLIBC_2.4	libc.so.6	0
+freeifaddrs	GLIBC_2.4	libc.so.6	0
+pthread_setname_np	GLIBC_2.12	libpthread.so.0	0
+sigemptyset	GLIBC_2.4	libc.so.6	0
+sigaction	GLIBC_2.4	libpthread.so.0	0
+signal	GLIBC_2.4	libc.so.6	0
+fprintf	GLIBC_2.4	libc.so.6	0
+stderr	GLIBC_2.4	libc.so.6	0
+isatty	GLIBC_2.4	libc.so.6	0
+stdout	GLIBC_2.4	libc.so.6	0
+shm_open	GLIBC_2.4	librt.so.1	0
+shm_unlink	GLIBC_2.4	librt.so.1	0
+munmap	GLIBC_2.4	libc.so.6	0
+mmap64	GLIBC_2.4	libc.so.6	0
+getpagesize	GLIBC_2.4	libc.so.6	0
+sysconf	GLIBC_2.4	libc.so.6	0
+mprotect	GLIBC_2.4	libc.so.6	0
+posix_memalign	GLIBC_2.4	libc.so.6	0
+vasprintf	GLIBC_2.4	libc.so.6	0
+strerror_r	GLIBC_2.4	libc.so.6	0
+clock_gettime	GLIBC_2.17	libc.so.6	0
+getauxval	GLIBC_2.16	libc.so.6	0
+sprintf	GLIBC_2.4	libc.so.6	0
+fdopen	GLIBC_2.4	libc.so.6	0
+clearerr	GLIBC_2.4	libc.so.6	0
+srandom	GLIBC_2.4	libc.so.6	0
+random	GLIBC_2.4	libc.so.6	0
+frexp	GLIBC_2.4	libm.so.6	0
+modf	GLIBC_2.4	libm.so.6	0
+fputc	GLIBC_2.4	libc.so.6	0
+pow	GLIBC_2.4	libm.so.6	0
+swab	GLIBC_2.4	libc.so.6	0
+fputs	GLIBC_2.4	libc.so.6	0
+vfprintf	GLIBC_2.4	libc.so.6	0
+open	GLIBC_2.4	libpthread.so.0	0
+aligned_alloc	GLIBC_2.16	libc.so.6	0
+atan	GLIBC_2.4	libm.so.6	0
+asin	GLIBC_2.4	libm.so.6	0
+acos	GLIBC_2.4	libm.so.6	0
+atan2	GLIBC_2.4	libm.so.6	0
+stpcpy	GLIBC_2.4	libc.so.6	0
+pthread_key_delete	GLIBC_2.4	libpthread.so.0	0
+pthread_mutexattr_init	GLIBC_2.4	libpthread.so.0	0
+pthread_mutexattr_settype	GLIBC_2.4	libpthread.so.0	0
+pthread_mutex_init	GLIBC_2.4	libpthread.so.0	0
+nl_langinfo	GLIBC_2.4	libc.so.6	0
+qsort	GLIBC_2.4	libc.so.6	0
+pthread_mutexattr_destroy	GLIBC_2.4	libpthread.so.0	0
+pthread_mutex_destroy	GLIBC_2.4	libpthread.so.0	0
+freopen64	GLIBC_2.4	libc.so.6	0
+stdin	GLIBC_2.4	libc.so.6	0
+getc	GLIBC_2.4	libc.so.6	0
+feof	GLIBC_2.4	libc.so.6	0
+strspn	GLIBC_2.4	libc.so.6	0
+fgets	GLIBC_2.4	libc.so.6	0
+tmpfile64	GLIBC_2.4	libc.so.6	0
+ungetc	GLIBC_2.4	libc.so.6	0
+localeconv	GLIBC_2.4	libc.so.6	0
+fseek	GLIBC_2.4	libc.so.6	0
+ftell	GLIBC_2.4	libc.so.6	0
+clock	GLIBC_2.4	libc.so.6	0
+tmpnam	GLIBC_2.4	libc.so.6	0
+strcoll	GLIBC_2.4	libc.so.6	0
+in6addr_any	GLIBC_2.4	libc.so.6	0
+getnameinfo	GLIBC_2.4	libc.so.6	0
+pthread_cond_wait	GLIBC_2.4	libpthread.so.0	0
+pthread_cond_broadcast	GLIBC_2.4	libpthread.so.0	0
+pthread_cond_signal	GLIBC_2.4	libpthread.so.0	0
+pthread_cond_timedwait	GLIBC_2.4	libpthread.so.0	0
+pthread_cond_destroy	GLIBC_2.4	libpthread.so.0	0
+fopen	GLIBC_2.4	libc.so.6	0
+fseeko	GLIBC_2.4	libc.so.6	0
+ftello	GLIBC_2.4	libc.so.6	0
+ungetwc	GLIBC_2.4	libc.so.6	0
+getwc	GLIBC_2.4	libc.so.6	0
+fputwc	GLIBC_2.4	libc.so.6	0
+newlocale	GLIBC_2.4	libc.so.6	0
+uselocale	GLIBC_2.4	libc.so.6	0
+__isoc99_vsscanf	GLIBC_2.7	libc.so.6	0
+strftime_l	GLIBC_2.4	libc.so.6	0
+mbsrtowcs	GLIBC_2.4	libc.so.6	0
+catopen	GLIBC_2.4	libc.so.6	0
+catgets	GLIBC_2.4	libc.so.6	0
+catclose	GLIBC_2.4	libc.so.6	0
+freelocale	GLIBC_2.4	libc.so.6	0
+strcoll_l	GLIBC_2.4	libc.so.6	0
+strxfrm_l	GLIBC_2.4	libc.so.6	0
+wcscoll_l	GLIBC_2.4	libc.so.6	0
+wcsxfrm_l	GLIBC_2.4	libc.so.6	0
+toupper_l	GLIBC_2.4	libc.so.6	0
+tolower_l	GLIBC_2.4	libc.so.6	0
+iswspace_l	GLIBC_2.4	libc.so.6	0
+iswprint_l	GLIBC_2.4	libc.so.6	0
+iswcntrl_l	GLIBC_2.4	libc.so.6	0
+iswupper_l	GLIBC_2.4	libc.so.6	0
+iswlower_l	GLIBC_2.4	libc.so.6	0
+iswalpha_l	GLIBC_2.4	libc.so.6	0
+iswdigit_l	GLIBC_2.4	libc.so.6	0
+iswpunct_l	GLIBC_2.4	libc.so.6	0
+iswxdigit_l	GLIBC_2.4	libc.so.6	0
+iswblank_l	GLIBC_2.4	libc.so.6	0
+towupper_l	GLIBC_2.4	libc.so.6	0
+towlower_l	GLIBC_2.4	libc.so.6	0
+btowc	GLIBC_2.4	libc.so.6	0
+wctob	GLIBC_2.4	libc.so.6	0
+wcsnrtombs	GLIBC_2.4	libc.so.6	0
+wcrtomb	GLIBC_2.4	libc.so.6	0
+mbsnrtowcs	GLIBC_2.4	libc.so.6	0
+mbrtowc	GLIBC_2.4	libc.so.6	0
+mbtowc	GLIBC_2.4	libc.so.6	0
+__ctype_get_mb_cur_max	GLIBC_2.4	libc.so.6	0
+strtoll_l	GLIBC_2.4	libc.so.6	0
+strtoull_l	GLIBC_2.4	libc.so.6	0
+strtof_l	GLIBC_2.4	libc.so.6	0
+strtod_l	GLIBC_2.4	libc.so.6	0
+strtold_l	GLIBC_2.4	libc.so.6	0
+pthread_mutex_trylock	GLIBC_2.4	libpthread.so.0	0
+strtof	GLIBC_2.4	libc.so.6	0
+strtold	GLIBC_2.4	libc.so.6	0
+wcstoul	GLIBC_2.4	libc.so.6	0
+wcstoll	GLIBC_2.4	libc.so.6	0
+wcstoull	GLIBC_2.4	libc.so.6	0
+wcstof	GLIBC_2.4	libc.so.6	0
+wcstod	GLIBC_2.4	libc.so.6	0
+wcstold	GLIBC_2.4	libc.so.6	0
+swprintf	GLIBC_2.4	libc.so.6	0
+wcstol	GLIBC_2.4	libc.so.6	0
+pthread_join	GLIBC_2.4	libpthread.so.0	0
+pthread_detach	GLIBC_2.4	libpthread.so.0	0
+nanosleep	GLIBC_2.4	libpthread.so.0	0
+dl_iterate_phdr	GLIBC_2.4	libc.so.6	0
+dladdr	GLIBC_2.4	libdl.so.2	0
+__xstat64	GLIBC_2.4	libc.so.6	0
+__fxstatat64	GLIBC_2.4	libc.so.6	0
+__fxstat64	GLIBC_2.4	libc.so.6	0

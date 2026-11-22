@@ -1,0 +1,88 @@
+--- a/GPU/Common/FramebufferManagerCommon.cpp
++++ b/GPU/Common/FramebufferManagerCommon.cpp
+@@ -40,6 +40,10 @@
+ #include "GPU/GPUCommon.h"
+ #include "GPU/GPUState.h"
+ 
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
++
+ static size_t FormatFramebufferName(const VirtualFramebuffer *vfb, char *tag, size_t len) {
+ 	return snprintf(tag, len, "FB_%08x_%08x_%dx%d_%s", vfb->fb_address, vfb->z_address, vfb->bufferWidth, vfb->bufferHeight, GeBufferFormatToString(vfb->fb_format));
+ }
+@@ -753,6 +757,9 @@
+ 			// Good old depth->depth copy.
+ 			BlitFramebufferDepth(source.vfb, dest);
+ 			gpuStats.perFrame.numDepthCopies++;
++#ifdef TIZENPSP_ARM_JIT
++			TizenFramebufferTransfer(TizenFramebufferEvent::DepthCopy);
++#endif
+ 			dest->last_frame_depth_updated = gpuStats.totals.numFlips;
+ 		} else if (source.channel == RASTER_COLOR && draw_->GetDeviceCaps().fragmentShaderDepthWriteSupported) {
+ 			VirtualFramebuffer *src = source.vfb;
+@@ -1104,6 +1111,9 @@
+ 	CopyDepthRect(vfb->fbo, 0, 0, temp, 0, 0, w, h, scale, "DepthShiftOut");
+ 	CopyDepthRect(temp, 0, 0, vfb->fbo, xOffset * scale, 0, w, h, scale, "DepthShiftIn");
+ 	gpuStats.perFrame.numDepthCopies++;
++#ifdef TIZENPSP_ARM_JIT
++	TizenFramebufferTransfer(TizenFramebufferEvent::DepthCopy);
++#endif
+ 	draw_->Invalidate(InvalidationFlags::CACHED_RENDER_STATE);
+ 	RebindFramebuffer("After ShiftDepthForOffsetRendering");
+ 	gstate_c.Dirty(DIRTY_ALL_RENDER_STATE);
+@@ -1647,6 +1657,9 @@
+ 		if (iter.contentsHash == imageHash && iter.tex->Width() == width && iter.tex->Height() == height && iter.tex->Format() == texFormat) {
+ 			iter.frameNumber = frameNumber;
+ 			gpuStats.perFrame.numCachedUploads++;
++#ifdef TIZENPSP_ARM_JIT
++			TizenFramebufferTransfer(TizenFramebufferEvent::CachedUpload);
++#endif
+ 			return iter.tex;
+ 		}
+ 	}
+@@ -1659,6 +1672,9 @@
+ 
+ 		// OK, current one seems good, let's use it (and mark it used).
+ 		gpuStats.perFrame.numUploads++;
++#ifdef TIZENPSP_ARM_JIT
++		TizenFramebufferTransfer(TizenFramebufferEvent::Upload);
++#endif
+ 		draw_->UpdateTextureLevels(iter.tex, &srcPixels, generateTexture, 1);
+ 		// NOTE: numFlips is no good - this is called every frame when paused sometimes!
+ 		iter.frameNumber = frameNumber;
+@@ -1697,6 +1713,9 @@
+ 	DrawPixelsEntry entry{ tex, imageHash, frameNumber };
+ 	drawPixelsCache_.push_back(entry);
+ 	gpuStats.perFrame.numUploads++;
++#ifdef TIZENPSP_ARM_JIT
++	TizenFramebufferTransfer(TizenFramebufferEvent::Upload);
++#endif
+ 	return tex;
+ }
+ 
+@@ -3568,8 +3587,14 @@
+ 
+ 	if (mode == Draw::ReadbackMode::BLOCK) {
+ 		gpuStats.perFrame.numBlockingReadbacks++;
++#ifdef TIZENPSP_ARM_JIT
++		TizenFramebufferTransfer(TizenFramebufferEvent::BlockingReadback);
++#endif
+ 	} else {
+ 		gpuStats.perFrame.numReadbacks++;
++#ifdef TIZENPSP_ARM_JIT
++		TizenFramebufferTransfer(TizenFramebufferEvent::NonblockingReadback);
++#endif
+ 	}
+ }
+ 
+@@ -3627,6 +3652,9 @@
+ 	textureCache_->ForgetLastTexture();
+ 	RebindFramebuffer("RebindFramebuffer - ReadbackStencilToMemory");
+ 	gpuStats.perFrame.numBlockingReadbacks++;
++#ifdef TIZENPSP_ARM_JIT
++	TizenFramebufferTransfer(TizenFramebufferEvent::BlockingReadback);
++#endif
+ 	if (!ok) {
+ 		return false;
+ 	}

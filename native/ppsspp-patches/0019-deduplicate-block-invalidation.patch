@@ -1,0 +1,61 @@
+--- a/Core/MIPS/IR/IRJit.cpp
++++ b/Core/MIPS/IR/IRJit.cpp
+@@ -477,13 +477,17 @@
+ 	u32 endPage = AddressToPage(address + lengthInBytes);
+ 
+ 	std::vector<int> found;
++	// A block can occupy several pages. Report it only from the first page
++	// shared by the block and this query, including queries starting inside it.
++	// Otherwise callers invalidate the same native entry repeatedly after Destroy.
+ 	// sceKernelIcacheInvalidateAll covers all of memory, a million pages.
+ 	if (endPage - startPage >= byPage_.size()) {
+ 		for (const auto &[page, blocksInPage] : byPage_) {
+ 			if (page < startPage || page > endPage)
+ 				continue;
+ 			for (int i : blocksInPage) {
+-				if (blocks_[i].OverlapsRange(address, lengthInBytes))
++				if (page == std::max(startPage, AddressToPage(blocks_[i].GetOriginalStart())) &&
++					blocks_[i].OverlapsRange(address, lengthInBytes))
+ 					found.push_back(i);
+ 			}
+ 		}
+@@ -496,7 +500,8 @@
+ 
+ 		const std::vector<int> &blocksInPage = iter->second;
+ 		for (int i : blocksInPage) {
+-			if (blocks_[i].OverlapsRange(address, lengthInBytes)) {
++			if (page == std::max(startPage, AddressToPage(blocks_[i].GetOriginalStart())) &&
++					blocks_[i].OverlapsRange(address, lengthInBytes)) {
+ 				// We now try to remove these during invalidation.
+ 				found.push_back(i);
+ 			}
+@@ -522,7 +527,7 @@
+ 	}
+ }
+ 
+-// Call after Destroy-ing it.
++// Call before Destroy, which clears the original address.
+ void JitBlockTable::RemoveBlockFromPageLookup(int blockIndex) {
+ 	// We need to remove the block from the byPage lookup.
+ 	JitBlock &block = blocks_[blockIndex];
+@@ -534,11 +539,16 @@
+ 	u32 endPage = AddressToPage(startAddr + size);
+ 
+ 	for (u32 page = startPage; page <= endPage; ++page) {
+-		auto iter = std::find(byPage_[page].begin(), byPage_[page].end(), blockIndex);
+-		if (iter != byPage_[page].end()) {
+-			byPage_[page].erase(iter);
++		auto pageIt = byPage_.find(page);
++		if (pageIt == byPage_.end())
++			continue;
++		auto &entries = pageIt->second;
++		auto iter = std::find(entries.begin(), entries.end(), blockIndex);
++		if (iter != entries.end()) {
++			entries.erase(iter);
++			if (entries.empty())
++				byPage_.erase(pageIt);
+ 		} else if (block.IsValid()) {
+-			// If it was previously invalidated, we don't care, hence the above check.
+ 			WARN_LOG(Log::JIT, "RemoveBlock: Block at %08x was not found where expected in byPage table.", startAddr);
+ 		}
+ 	}

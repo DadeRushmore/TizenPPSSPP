@@ -1,0 +1,136 @@
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -50,7 +50,9 @@
+ 	jo.useStaticAlloc = false;
+ 	jo.optimizeForInterpreter = false;
+ #ifdef TIZENPSP_ARM_JIT
+-	jo.enableBlocklink = false;
++	// Link only while appending new code; never reopen another block's exits.
++	jo.enableBlocklink = !jo.Disabled(JitDisable::BLOCKLINK);
++	jo.useBackJump = false;
+ 	TizenJitEvent("arm_backend_construct", 0, NATIVE_CODE_SPACE_SIZE, 0, 0);
+ #endif
+ 
+@@ -67,6 +69,9 @@
+ }
+ 
+ bool ArmJitBackend::CompileBlock(int block_num, u32 startPC, const IRInst *instructions, int count) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenPerfScope compileTime(TizenPerfPhase::Compile);
++#endif
+ 	if (GetSpaceLeft() < 0x800)
+ 		return false;
+ 
+@@ -99,11 +104,14 @@
+ 	regs_.Start(startPC, instructions, count);
+ 
+ 	std::vector<const u8 *> addresses;
+-	addresses.reserve(count);
++	const bool recordAddresses = profiling_ || logBlocks_ > 0;
++	if (recordAddresses)
++		addresses.reserve(count);
+ 	for (int i = 0; i < count; ++i) {
+ 		const IRInst &inst = instructions[i];
+ 		regs_.SetIRIndex(i);
+-		addresses.push_back(GetCodePtr());
++		if (recordAddresses)
++			addresses.push_back(GetCodePtr());
+ 
+ 		CompileIRInst(inst);
+ 
+@@ -196,11 +204,18 @@
+ 	int exitStart = (int)GetOffset(GetCodePointer());
+ 	if (block_num >= 0 && jo.enableBlocklink && nativeBlock && nativeBlock->checkedOffset != 0) {
+ 		B(GetBasePtr() + nativeBlock->checkedOffset);
++#ifdef TIZENPSP_ARM_JIT
++		TizenJitExit(true);
++#endif
+ 	} else {
+ 		MOVI2R(SCRATCH1, pc);
+ 		B(dispatcherPCInSCRATCH1_);
+-	}
+-
++#ifdef TIZENPSP_ARM_JIT
++		TizenJitExit(false);
++#endif
++	}
++
++#ifndef TIZENPSP_ARM_JIT
+ 	if (jo.enableBlocklink) {
+ 		// In case of compression or early link, make sure it's large enough.
+ 		int len = (int)GetOffset(GetCodePointer()) - exitStart;
+@@ -211,6 +226,7 @@
+ 
+ 		AddLinkableExit(compilingBlockNum_, pc, exitStart, len);
+ 	}
++#endif
+ }
+ 
+ void ArmJitBackend::OverwriteExit(int srcOffset, int len, int block_num) {
+@@ -305,12 +321,18 @@
+ }
+ 
+ void ArmJitBackend::ClearAllBlocks() {
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitCacheClear();
++#endif
+ 	ClearCodeSpace(jitStartOffset_);
+ 	FlushIcacheSection(region + jitStartOffset_, region + region_size - jitStartOffset_);
+ 	EraseAllLinks(-1);
+ }
+ 
+ void ArmJitBackend::InvalidateBlock(int block_num) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitInvalidation();
++#endif
+ 	const IRNativeBlock *nativeBlock = GetNativeBlock(block_num);
+ 	int offset = nativeBlock->entryOffset;
+ 	u8 *writable = GetWritablePtrFromCodePtr(GetBasePtr()) + offset;
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -50,6 +50,7 @@
+ #include "Core/CoreTiming.h"
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_frame_pacing.h"
++#include "tizenpsp_jit_diagnostics.h"
+ static std::atomic<unsigned> tizenGuestMillis{0}, tizenActualFlips{0}, tizenFoldedFlips{0};
+ extern "C" unsigned retro_tizenpsp_guest_millis() { return tizenGuestMillis.load(); }
+ extern "C" unsigned retro_tizenpsp_actual_flips() { return tizenActualFlips.load(); }
+@@ -1431,6 +1432,9 @@
+ 
+    static std::thread emuThread;
+    static void EmuFrame() {
++#ifdef TIZENPSP_ARM_JIT
++      TizenPerfScope emuTime(TizenPerfPhase::Emu);
++#endif
+       ctx->SetRenderTarget();
+       Draw::DrawContext *draw = ctx->GetDrawContext();
+       if (draw) {
+@@ -1884,7 +1888,16 @@
+          EmuThreadStart();
+       }
+ 
++#ifdef TIZENPSP_ARM_JIT
++      bool frameReady;
++      {
++         TizenPerfScope renderTime(TizenPerfPhase::Render);
++         frameReady = ctx->ThreadFrame();
++      }
++      if (!frameReady) {
++#else
+       if (!ctx->ThreadFrame()) {
++#endif
+          // We're done processing the last frame from the emu thread.
+          VsyncSwapIntervalDetect();
+          return;
+--- a/Common/CodeBlock.h
++++ b/Common/CodeBlock.h
+@@ -146,7 +146,7 @@
+ 			const uint8_t *end = GetCodePtr();
+ 			size_t sz = end - writeStart_;
+ #ifdef TIZENPSP_ARM_JIT
+-			// This target appends blocks with linking disabled and a page-separated
++			// This target appends blocks without exit rewriting and has a page-separated
+ 			// dispatcher. Future pages must remain RW: protecting an unused estimate
+ 			// can make a later underestimated block write into an RX page.
+ 			if (sz > writeEstimated_)

@@ -1,0 +1,80 @@
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -23,6 +23,12 @@
+ #include "GLRenderManager.h"
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_gl_profile.h"
++#include "tizenpsp_vertex_binding.h"
++extern "C" void glVertexAttribFormat(unsigned,int,unsigned,unsigned char,unsigned) __attribute__((weak));
++extern "C" void glVertexAttribBinding(unsigned,unsigned) __attribute__((weak));
++extern "C" void glBindVertexBuffer(unsigned,unsigned,intptr_t,int) __attribute__((weak));
++static const TizenVertexBindingAPI tizenBindingAPI{glVertexAttribFormat,glVertexAttribBinding,glBindVertexBuffer};
++static bool tizenSeparateVertexBinding=false;
+ #endif
+ #include "DataFormatGL.h"
+ 
+@@ -58,6 +64,21 @@
+ 	if (gl_extensions.ARB_vertex_array_object) {
+ 		glGenVertexArrays(1, &globalVAO_);
+ 	}
++
++#ifdef TIZENPSP_ARM_JIT
++	tizenSeparateVertexBinding=false;
++	if (globalVAO_ && gl_extensions.IsGLES && gl_extensions.VersionGEThan(3,1) && tizenBindingAPI.Available()) {
++		// Probe on the core's new VAO, preserving the frontend's binding.
++		GLint oldVAO=0;glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&oldVAO);
++		glBindVertexArray(globalVAO_);
++		tizenBindingAPI.format(0,4,GL_FLOAT,GL_FALSE,0);
++		tizenBindingAPI.attributeBinding(0,0);
++		tizenBindingAPI.bufferBinding(0,0,0,16);
++		tizenSeparateVertexBinding=glGetError()==GL_NO_ERROR;
++		glBindVertexArray((GLuint)oldVAO);
++	}
++	INFO_LOG(Log::G3D,"TIZEN_VERTEX_BINDING separate=%d",tizenSeparateVertexBinding?1:0);
++#endif
+ 
+ 	// Texture uploads pass tightly packed rows. With the default of 4, the driver reads past the end of
+ 	// any whose rows aren't a multiple of 4 bytes (a 16-bit texture of odd width): the Adreno 840 crashed
+@@ -950,6 +971,9 @@
+ 	GLRProgram *curProgram = nullptr;
+ 	int activeSlot = -1;
+ 
++#ifdef TIZENPSP_ARM_JIT
++	TizenVertexBindingState vertexBindings;
++#endif
+ 	// State filtering tracking.
+ 	int attrMask = 0;
+ 	int colorMask = -1;
+@@ -1391,6 +1415,11 @@
+ 				EnableDisableVertexArrays(attrMask, layout->semanticsMask_);
+ 				attrMask = layout->semanticsMask_;
+ 			}
++#ifdef TIZENPSP_ARM_JIT
++			if (!vertexBindings.Apply(tizenBindingAPI,tizenSeparateVertexBinding,layout,
++				c.draw.vertexBuffer->buffer_,c.draw.vertexOffset,
++				c.draw.vertexBuffer1?c.draw.vertexBuffer1->buffer_:0,c.draw.vertexBuffer1?c.draw.vertexOffset1:0)) {
++#endif
+ 			// Stream 1 first, so stream 0 is left bound.
+ 			if (layout->stride1) {
+ 				_dbg_assert_(c.draw.vertexBuffer1 && !c.draw.vertexBuffer1->Mapped());
+@@ -1417,6 +1446,9 @@
+ 					glVertexAttribPointer(entry.location, entry.count, entry.type, entry.normalized, layout->stride, (const void *)(c.draw.vertexOffset + entry.offset));
+ 				}
+ 			}
++#ifdef TIZENPSP_ARM_JIT
++			}
++#endif
+ 			if (c.draw.indexBuffer) {
+ 				GLuint buf = c.draw.indexBuffer->buffer_;
+ 				_dbg_assert_(!c.draw.indexBuffer->Mapped());
+@@ -1588,6 +1620,10 @@
+ 		}
+ 	}
+ 
++#ifdef TIZENPSP_ARM_JIT
++	TizenVertexBindingRecord(vertexBindings.fastDraws,vertexBindings.fallbackDraws,
++		vertexBindings.formatCalls,vertexBindings.bindingCalls,vertexBindings.legacyAttributeCalls);
++#endif
+ 	for (int i = 0; i < 7; i++) {
+ 		if (attrMask & (1 << i)) {
+ 			glDisableVertexAttribArray(i);

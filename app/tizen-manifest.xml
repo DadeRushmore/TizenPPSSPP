@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://tizen.org/ns/packages" api-version="5.0" package="org.roelof.tizenpsp" version="0.24.4">
+  <profile name="tv" />
+  <ui-application appid="org.roelof.tizenpsp" exec="TizenPSP.dll" type="dotnet" multiple="false" taskmanage="true" nodisplay="false" launch_mode="single" api-version="5.0">
+    <label>TizenPPSSPP</label><icon>TizenPSP.png</icon>
+  </ui-application>
+  <privileges><privilege>http://tizen.org/privilege/externalstorage</privilege><privilege>http://tizen.org/privilege/internet</privilege></privileges>
+</manifest>

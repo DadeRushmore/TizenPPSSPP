@@ -1,0 +1,70 @@
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -62,12 +62,20 @@
+ 		maxAnisotropyLevel_ = 0.0f;
+ 	}
+ 
+-	if (gl_extensions.ARB_vertex_array_object) {
++	// GLES 3.1 has core VAOs without the desktop ARB extension string.
++	// Own one for the separate-binding path and use the same ownership test
++	// for rendering and destruction; otherwise the probe can never run.
++	if (gl_extensions.ARB_vertex_array_object
++#ifdef TIZENPSP_ARM_JIT
++		|| (gl_extensions.IsGLES && gl_extensions.VersionGEThan(3,1) && tizenBindingAPI.Available())
++#endif
++	) {
+ 		glGenVertexArrays(1, &globalVAO_);
+ 	}
+ 
+ #ifdef TIZENPSP_ARM_JIT
+ 	tizenSeparateVertexBinding=false;
++	GLenum bindingProbeError=GL_NO_ERROR;
+ 	if (globalVAO_ && gl_extensions.IsGLES && gl_extensions.VersionGEThan(3,1) && tizenBindingAPI.Available()) {
+ 		// Probe on the core's new VAO, preserving the frontend's binding.
+ 		GLint oldVAO=0;glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&oldVAO);
+@@ -75,11 +83,14 @@
+ 		tizenBindingAPI.format(0,4,GL_FLOAT,GL_FALSE,0);
+ 		tizenBindingAPI.attributeBinding(0,0);
+ 		tizenBindingAPI.bufferBinding(0,0,0,16);
+-		tizenSeparateVertexBinding=glGetError()==GL_NO_ERROR;
++		bindingProbeError=glGetError();
++		tizenSeparateVertexBinding=bindingProbeError==GL_NO_ERROR;
+ 		glBindVertexArray((GLuint)oldVAO);
+ 	}
+ 	TizenVertexBindingCapability(tizenSeparateVertexBinding);
+-	INFO_LOG(Log::G3D,"TIZEN_VERTEX_BINDING separate=%d",tizenSeparateVertexBinding?1:0);
++	INFO_LOG(Log::G3D,"TIZEN_VERTEX_BINDING separate=%d vao=%u gles=%d es31=%d api_mask=%u probe_error=0x%x",
++		tizenSeparateVertexBinding?1:0,globalVAO_,gl_extensions.IsGLES?1:0,gl_extensions.VersionGEThan(3,1)?1:0,
++		(tizenBindingAPI.format?1u:0u)|(tizenBindingAPI.attributeBinding?2u:0u)|(tizenBindingAPI.bufferBinding?4u:0u),bindingProbeError);
+ #endif
+ 
+ 	// Texture uploads pass tightly packed rows. With the default of 4, the driver reads past the end of
+@@ -131,8 +142,9 @@
+ #endif
+ 	profiler_.Shutdown();
+ 	CHECK_GL_ERROR_IF_DEBUG();
+-	if (gl_extensions.ARB_vertex_array_object) {
++	if (globalVAO_) {
+ 		glDeleteVertexArrays(1, &globalVAO_);
++		globalVAO_=0;
+ 	}
+ 	delete[] readbackBuffer_;
+ 	readbackBuffer_ = nullptr;
+@@ -986,7 +998,7 @@
+ 			glDisable(GL_COLOR_LOGIC_OP);
+ 		}
+ #endif
+-		if (gl_extensions.ARB_vertex_array_object) {
++		if (globalVAO_) {
+ 			glBindVertexArray(globalVAO_);
+ 		}
+ 	}
+@@ -1671,7 +1683,7 @@
+ 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+ 	if (curElemArrayBuffer != 0)
+ 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+-	if (last && gl_extensions.ARB_vertex_array_object) {
++	if (last && globalVAO_) {
+ 		glBindVertexArray(0);
+ 	}
+ 	if (last) {

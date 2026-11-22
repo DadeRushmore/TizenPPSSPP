@@ -1,0 +1,9 @@
+{
+  "revision": "a7d80b680a63ffb72be6e9596da680a51c081a2f",
+  "url": "https://codeload.github.com/hrydgard/ppsspp/tar.gz/a7d80b680a63ffb72be6e9596da680a51c081a2f",
+  "archive_sha256": "f8e376b7f1a0a6fdc714ea5f6414570b58018b8175a66aac0cba17f4fe27625f",
+  "archive_bytes": 29535738,
+  "cmake": "3.31.6",
+  "ninja": "1.11.1.3",
+  "zig": "0.13.0"
+}

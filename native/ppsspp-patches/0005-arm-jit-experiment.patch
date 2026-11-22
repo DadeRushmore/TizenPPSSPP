@@ -1,0 +1,231 @@
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -599,8 +599,10 @@
+    g_Config.iCpuCore = (int)CPUCore::INTERPRETER;
+ #endif
+ 
++#ifndef TIZENPSP_ARM_JIT
+    // TizenPSP: pin CPU mode after every core-option update.
+    g_Config.iCpuCore = (int)CPUCore::IR_INTERPRETER;
++#endif
+ 
+    var.key = "ppsspp_fast_memory";
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+@@ -1622,7 +1624,11 @@
+ 
+    // set cpuCore from libretro setting variable
+    coreParam.cpuCore         =  (CPUCore)g_Config.iCpuCore;
++#ifdef TIZENPSP_NO_VERTEX_JIT
++   coreParam.bUseVertexDecoderJit = false;
++#else
+    coreParam.bUseVertexDecoderJit = System_GetPropertyBool(SYSPROP_CAN_JIT);
++#endif
+ 
+    g_pendingBoot = true;
+ 
+@@ -2097,8 +2103,15 @@
+ bool System_GetPropertyBool(SystemProperty prop) {
+    switch (prop) {
+    case SYSPROP_CAN_JIT:
++#ifdef TIZENPSP_ARM_JIT
++      {
++         bool allowed = false;
++         return environ_cb(RETRO_ENVIRONMENT_GET_JIT_CAPABLE, &allowed) && allowed;
++      }
++#else
+       // TizenPSP interpreter-only milestone: includes vertex-decoder JIT.
+       return false;
++#endif
+    case SYSPROP_ENOUGH_RAM_FOR_FULL_ISO:
+ #ifdef LIBRETRO_CAN_CACHE_ISO_IN_RAM
+       return true;
+--- a/libretro/link.T
++++ b/libretro/link.T
+@@ -1,5 +1,5 @@
+ {
+-   global: retro_*;
++   global: retro_*; tizenpsp_jit_*;
+    local: *;
+ };
+ 
+--- a/GPU/Common/VertexDecoderCommon.h
++++ b/GPU/Common/VertexDecoderCommon.h
+@@ -350,7 +350,7 @@
+ //
+ // that's it!
+ 
+-#if defined(TIZENPSP_NO_JIT)
++#if defined(TIZENPSP_NO_JIT) || defined(TIZENPSP_NO_VERTEX_JIT)
+ // Use the existing null vertex-decoder JIT implementation.
+ #elif PPSSPP_ARCH(ARM)
+ #define VERTEXDECODER_JIT_BACKEND ArmGen::ARMXCodeBlock
+--- a/Common/MemoryUtil.cpp
++++ b/Common/MemoryUtil.cpp
+@@ -24,6 +24,10 @@
+ #include "Common/CommonTypes.h"
+ #include "Common/Log.h"
+ #include "Common/MemoryUtil.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
++
+ #include "Common/StringUtils.h"
+ #include "Common/SysError.h"
+ #include "Common/Data/Text/Parsers.h"
+@@ -254,7 +258,16 @@
+ 	if (PlatformIsWXExclusive())
+ 		prot = PROT_READ | PROT_WRITE;  // POST_EXEC is added later in this case.
+ 
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitEvent("mmap_rw_begin", 0, size, prot, 0);
++#endif
+ 	void* ptr = mmap(map_hint, size, prot, MAP_ANON | MAP_PRIVATE, -1, 0);
++#ifdef TIZENPSP_ARM_JIT
++	if (ptr == MAP_FAILED) {
++		TizenJitFatal("mmap_rw_failed", ptr, size, prot, errno);
++	}
++	TizenJitEvent("mmap_rw_ready", (uintptr_t)ptr, size, prot, 0);
++#endif
+ 
+ 	if (ptr == MAP_FAILED) {
+ 		ptr = nullptr;
+@@ -418,7 +431,7 @@
+ bool PlatformIsWXExclusive() {
+ 	// Needed on platforms that disable W^X pages for security. Even without block linking, still should be much faster than IR JIT.
+ 	// This might also come in useful for UWP (Universal Windows Platform) if I'm understanding things correctly.
+-#if PPSSPP_PLATFORM(IOS) || PPSSPP_PLATFORM(UWP) || defined(__OpenBSD__)
++#if defined(TIZENPSP_ARM_JIT) || PPSSPP_PLATFORM(IOS) || PPSSPP_PLATFORM(UWP) || defined(__OpenBSD__)
+ 	return true;
+ #elif PPSSPP_PLATFORM(MAC) && PPSSPP_ARCH(ARM64)
+ 	return true;
+@@ -437,6 +450,9 @@
+ 
+ 	if (PlatformIsWXExclusive()) {
+ 		if ((memProtFlags & (MEM_PROT_WRITE | MEM_PROT_EXEC)) == (MEM_PROT_WRITE | MEM_PROT_EXEC)) {
++#ifdef TIZENPSP_ARM_JIT
++			TizenJitFatal("rwx_rejected", ptr, size, memProtFlags, EINVAL);
++#endif
+ 			_assert_msg_(false, "Bad memory protect flags %d: W^X is in effect, can't both write and exec", memProtFlags);
+ 		}
+ 	}
+@@ -478,6 +494,13 @@
+ 	start &= ~(page_size - 1);
+ 	end = (end + page_size - 1) & ~(page_size - 1);
+ 	int retval = mprotect((void *)start, end - start, protect);
++#ifdef TIZENPSP_ARM_JIT
++	int savedError = retval ? errno : 0;
++	TizenJitProtection((void *)start, end - start, memProtFlags, savedError);
++	if (retval != 0) {
++		TizenJitFatal("mprotect_failed", (void *)start, end - start, memProtFlags, savedError);
++	}
++#endif
+ 	if (retval != 0) {
+ 		ERROR_LOG(Log::MemMap, "mprotect failed (%p)! errno=%d (%s)", (void *)start, errno, strerror(errno));
+ 		return false;
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -22,6 +22,10 @@
+ #include <cstddef>
+ #include <map>
+ #include "Common/MemoryUtil.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
++
+ #include "Core/MemMap.h"
+ #include "Core/MIPS/MIPSTables.h"
+ #include "Core/MIPS/ARM/ArmIRJit.h"
+@@ -45,6 +49,10 @@
+ 	jo.enablePointerify = false;
+ 	jo.useStaticAlloc = false;
+ 	jo.optimizeForInterpreter = false;
++#ifdef TIZENPSP_ARM_JIT
++	jo.enableBlocklink = false;
++	TizenJitEvent("arm_backend_construct", 0, NATIVE_CODE_SPACE_SIZE, 0, 0);
++#endif
+ 
+ 	// Since we store the offset, this is as big as it can be.
+ 	AllocCodeSpace(NATIVE_CODE_SPACE_SIZE);
+@@ -170,7 +178,9 @@
+ 	EndWrite();
+ 	FlushIcache();
+ 	compilingBlockNum_ = -1;
+-
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitCompiled(startPC, len);
++#endif
+ 	return true;
+ }
+ 
+--- a/Core/MIPS/ARM/ArmIRAsm.cpp
++++ b/Core/MIPS/ARM/ArmIRAsm.cpp
+@@ -20,6 +20,10 @@
+ 
+ #include "Common/Log.h"
+ #include "Common/MemoryUtil.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
++
+ #include "Core/CoreTiming.h"
+ #include "Core/MIPS/ARM/ArmVfpuDot.h"
+ #include "Core/MemMap.h"
+@@ -39,6 +43,9 @@
+ static const bool enableDisasm = false;
+ 
+ void ArmJitBackend::GenerateFixedCode(MIPSState *mipsState) {
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitEvent("dispatcher_generate_begin", (uintptr_t)GetBasePtr(), GetRegionSize(), 0, 0);
++#endif
+ 	// This will be used as a writable scratch area, always 32-bit accessible.
+ 	const u8 *start = AlignCodePage();
+ 	if (DebugProfilerEnabled()) {
+@@ -219,6 +226,9 @@
+ 	// Don't forget to zap the instruction cache! This must stay at the end of this function.
+ 	FlushIcache();
+ 	EndWrite();
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitEvent("dispatcher_ready_rx", (uintptr_t)hooks_.enterDispatcher, jitStartOffset_, 5, 0);
++#endif
+ }
+ 
+ void ArmJitBackend::GetFixedCodeLabels(std::vector<IRNativeFixedCodeLabel> &labels) const {
+--- a/Core/MIPS/IR/IRNativeCommon.cpp
++++ b/Core/MIPS/IR/IRNativeCommon.cpp
+@@ -23,6 +23,10 @@
+ #include "Common/Profiler/Profiler.h"
+ #include "Common/StringUtils.h"
+ #include "Common/TimeUtil.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
++
+ #include "Core/Config.h"
+ #include "Core/Core.h"
+ #include "Core/Debugger/SymbolMap.h"
+@@ -602,13 +606,25 @@
+ 	}
+ 
+ 	PROFILE_THIS_SCOPE("jit");
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitDispatch(true, mips_->pc);
++#endif
+ 	hooks_.enterDispatcher();
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitDispatch(false, mips_->pc);
++#endif
+ }
+ 
+ // For the Media Engine, whose dispatcher leaves when the downcount runs out.
+ void IRNativeJit::RunDowncount() {
+ 	PROFILE_THIS_SCOPE("jit");
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitDispatch(true, mips_->pc);
++#endif
+ 	hooks_.enterDispatcher();
++#ifdef TIZENPSP_ARM_JIT
++	TizenJitDispatch(false, mips_->pc);
++#endif
+ }
+ 
+ void IRNativeJit::FlushProfile() {

@@ -1,0 +1,81 @@
+--- a/GPU/Common/VertexDecoderArm.cpp
++++ b/GPU/Common/VertexDecoderArm.cpp
+@@ -117,6 +117,7 @@
+ 
+ 	{&VertexDecoder::Step_TcU8Prescale, &VertexDecoderJitCache::Jit_TcU8Prescale},
+ 	{&VertexDecoder::Step_TcU16Prescale, &VertexDecoderJitCache::Jit_TcU16Prescale},
++	{&VertexDecoder::Step_TcU16PrescaleMorph, &VertexDecoderJitCache::Jit_TcU16PrescaleMorph},
+ 	{&VertexDecoder::Step_TcFloatPrescale, &VertexDecoderJitCache::Jit_TcFloatPrescale},
+ 
+ 	{&VertexDecoder::Step_TcFloatThrough, &VertexDecoderJitCache::Jit_TcFloatThrough},
+@@ -172,15 +173,19 @@
+ 	const u8 *start = AlignCode16();
+ 
+ 	bool prescaleStep = false;
++	bool morphPrescaleStep = false;
+ 	bool skinning = false;
+ 
+ 	// Look for prescaled texcoord steps
+ 	for (int i = 0; i < dec.numSteps_; i++) {
+ 		if (dec.steps_[i] == &VertexDecoder::Step_TcU8Prescale ||
+ 			dec.steps_[i] == &VertexDecoder::Step_TcU16Prescale ||
++			dec.steps_[i] == &VertexDecoder::Step_TcU16PrescaleMorph ||
+ 			dec.steps_[i] == &VertexDecoder::Step_TcFloatPrescale) {
+ 				prescaleStep = true;
+ 		}
++		if (dec.steps_[i] == &VertexDecoder::Step_TcU16PrescaleMorph)
++			morphPrescaleStep = true;
+ 		if (dec.steps_[i] == &VertexDecoder::Step_WeightsU8Skin ||
+ 			dec.steps_[i] == &VertexDecoder::Step_WeightsU16Skin ||
+ 			dec.steps_[i] == &VertexDecoder::Step_WeightsFloatSkin) {
+@@ -202,7 +207,7 @@
+ 		if ((dec.VertexType() & GE_VTYPE_TC_MASK) == GE_VTYPE_TC_8BIT) {
+ 			VMOV_neon(F_32, neonScratchReg, by128);
+ 			VMUL(F_32, neonUVScaleReg, neonUVScaleReg, neonScratchReg);
+-		} else if ((dec.VertexType() & GE_VTYPE_TC_MASK) == GE_VTYPE_TC_16BIT) {
++		} else if ((dec.VertexType() & GE_VTYPE_TC_MASK) == GE_VTYPE_TC_16BIT && !morphPrescaleStep) {
+ 			VMOV_neon(F_32, neonScratchReg, by32768);
+ 			VMUL(F_32, neonUVScaleReg, neonUVScaleReg, neonScratchReg);
+ 		}
+@@ -528,6 +533,41 @@
+ 	VST1(F_32, neonScratchReg, scratchReg2, 1, ALIGN_NONE);
+ }
+ 
++void VertexDecoderJitCache::Jit_TcU16PrescaleMorph() {
++	// Keep scalar VFP arithmetic and its operation order for this former
++	// interpreter path. NEON arithmetic would flush subnormal morph weights.
++	// Q0 contains the raw scale/offset; normalization happens after scaling.
++	ADDI2R(tempReg1, srcReg, dec_->tcoff, scratchReg);
++	MOVP2R(tempReg2, &gstate_c.morphWeights[0]);
++	MOVI2F(S8, 0.0f, scratchReg);
++	VMOV(S9, S8);
++	for (int n = 0; n < dec_->morphcount; ++n) {
++		LDRH(scratchReg, tempReg1, 0);
++		VMOV(S4, scratchReg);
++		VCVT(S4, S4, TO_FLOAT);
++		LDRH(scratchReg, tempReg1, 2);
++		VMOV(S5, scratchReg);
++		VCVT(S5, S5, TO_FLOAT);
++		VLDR(S6, tempReg2, 0);
++		VMUL(S7, S4, S6);
++		VADD(S8, S8, S7);
++		VMUL(S7, S5, S6);
++		VADD(S9, S9, S7);
++		ADDI2R(tempReg1, tempReg1, dec_->onesize_, scratchReg);
++		ADD(tempReg2, tempReg2, 4);
++	}
++	MOVI2F(S10, by32768, scratchReg);
++	VMUL(S8, S8, S0);
++	VMUL(S8, S8, S10);
++	VADD(S8, S8, S2);
++	VMUL(S9, S9, S1);
++	VMUL(S9, S9, S10);
++	VADD(S9, S9, S3);
++	ADDI2R(tempReg1, dstReg, dec_->decFmt.uvoff, scratchReg);
++	VSTR(S8, tempReg1, 0);
++	VSTR(S9, tempReg1, 4);
++}
++
+ void VertexDecoderJitCache::Jit_TcU16ToFloat() {
+ 	ADD(scratchReg, srcReg, dec_->tcoff);
+ 	VLD1_lane(I_32, neonScratchReg, scratchReg, 0, false);

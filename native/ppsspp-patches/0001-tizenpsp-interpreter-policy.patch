@@ -1,0 +1,27 @@
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -599,6 +599,9 @@
+    g_Config.iCpuCore = (int)CPUCore::INTERPRETER;
+ #endif
+ 
++   // TizenPSP: pin CPU mode after every core-option update.
++   g_Config.iCpuCore = (int)CPUCore::IR_INTERPRETER;
++
+    var.key = "ppsspp_fast_memory";
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+@@ -2094,12 +2097,8 @@
+ bool System_GetPropertyBool(SystemProperty prop) {
+    switch (prop) {
+    case SYSPROP_CAN_JIT:
+-#if PPSSPP_PLATFORM(IOS)
+-      bool can_jit;
+-      return (environ_cb(RETRO_ENVIRONMENT_GET_JIT_CAPABLE, &can_jit) && can_jit);
+-#else
+-      return true;
+-#endif
++      // TizenPSP interpreter-only milestone: includes vertex-decoder JIT.
++      return false;
+    case SYSPROP_ENOUGH_RAM_FOR_FULL_ISO:
+ #ifdef LIBRETRO_CAN_CACHE_ISO_IN_RAM
+       return true;

@@ -1,0 +1,14 @@
+--- a/Core/MIPS/ARM/ArmIRJit.cpp
++++ b/Core/MIPS/ARM/ArmIRJit.cpp
+@@ -117,6 +117,11 @@
+ 		// Safety check, in case we get a bunch of really large jit ops without a lot of branching.
+ 		if (GetSpaceLeft() < 0x800) {
+ 			compilingBlockNum_ = -1;
++#ifdef TIZENPSP_ARM_JIT
++			EndWrite();
++			FlushIcache();
++			TizenJitEvent("code_space_exhausted", startPC, GetSpaceLeft(), 0, 0);
++#endif
+ 			return false;
+ 		}
+ 	}

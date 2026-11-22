@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.13)
+project(tizenpsp_codec_check C)
+add_subdirectory(../../vendor/ppsspp/ext/ffmpeg-build ffmpeg)
+add_executable(codec-check codec-check.c)
+target_link_libraries(codec-check PRIVATE ffmpeg)

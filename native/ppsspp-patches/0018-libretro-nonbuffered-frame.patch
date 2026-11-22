@@ -1,0 +1,45 @@
+--- a/libretro/libretro.cpp
++++ b/libretro/libretro.cpp
+@@ -1471,6 +1471,29 @@
+          draw->BeginFrame(Draw::DebugFlags::NONE);
+       }
+ 
++      // Non-buffered rendering draws straight to the frontend backbuffer. Like
++      // EmuScreen, start that render pass before running the guest: no PSP FBO
++      // will be bound in this mode, and GL draw commands require an active pass.
++      const bool skipBufferEffects = g_Config.bSkipBufferEffects;
++      using namespace Draw;
++      static DrawContext *nonBufferedDraw = nullptr;
++      if (draw && skipBufferEffects) {
++         // Initialize a new target, then retain its color on frontend ticks
++         // without drawing (idle/frameskip). The frontend preserves this FBO.
++         const RPAction colorAction = nonBufferedDraw == draw ? RPAction::KEEP : RPAction::CLEAR;
++         draw->BindFramebufferAsRenderTarget(draw->GetPrimarySwapchain(), {colorAction, RPAction::CLEAR, RPAction::CLEAR}, "BackBuffer");
++         nonBufferedDraw = draw;
++      } else {
++         nonBufferedDraw = nullptr;
++      }
++#ifdef TIZENPSP_ARM_JIT
++      static int loggedRenderPath = -1;
++      if (loggedRenderPath != (int)skipBufferEffects) {
++         loggedRenderPath = (int)skipBufferEffects;
++         INFO_LOG(Log::G3D, "LIBRETRO_RENDER_PATH skip_buffer_effects=%u backbuffer_bind=%s", skipBufferEffects ? 1U : 0U, skipBufferEffects ? "before_guest" : "after_guest");
++      }
++#endif
++
+       const DisplayLayoutConfig &displayLayoutConfig = g_Config.GetDisplayLayoutConfig(g_display.GetDeviceOrientation());
+       if (gpu) {
+          gpu->BeginHostFrame(displayLayoutConfig);
+@@ -1508,9 +1531,9 @@
+          }
+       }
+ 
+-      // gotta do the backbuffer bind somewhere.
+-      using namespace Draw;
+-      if (draw) {
++      // Buffered rendering presents the completed PSP framebuffer here.
++      // Non-buffered rendering already drew to the backbuffer; do not clear it.
++      if (draw && !skipBufferEffects) {
+          draw->BindFramebufferAsRenderTarget(draw->GetPrimarySwapchain(), {RPAction::CLEAR, RPAction::CLEAR, RPAction::CLEAR}, "BackBuffer");
+       }
+ 

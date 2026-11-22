@@ -1,0 +1,100 @@
+--- a/Common/GPU/OpenGL/GLRenderManager.h
++++ b/Common/GPU/OpenGL/GLRenderManager.h
+@@ -1,4 +1,8 @@
+ #pragma once
++
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_uniform_cache.h"
++#endif
+ 
+ #include <atomic>
+ #include <thread>
+@@ -157,6 +161,9 @@
+ 	};
+ 
+ 	GLuint program = 0;
++#ifdef TIZENPSP_ARM_JIT
++	TizenUniformCache uniformValues_;
++#endif
+ 	std::vector<Semantic> semantics_;
+ 	std::vector<UniformLocQuery> queries_;
+ 	std::vector<Initializer> initialize_;
+--- a/Common/GPU/OpenGL/GLQueueRunner.cpp
++++ b/Common/GPU/OpenGL/GLQueueRunner.cpp
+@@ -262,6 +262,9 @@
+ 			}
+ #endif
+ 			glLinkProgram(program->program);
++#ifdef TIZENPSP_ARM_JIT
++			program->uniformValues_.Clear();
++#endif
+ 
+ 			GLint linkStatus = GL_FALSE;
+ 			glGetProgramiv(program->program, GL_LINK_STATUS, &linkStatus);
+@@ -1201,6 +1204,11 @@
+ 			}
+ 			if (loc >= 0) {
+ 				_dbg_assert_(c.uniform4.count >=1 && c.uniform4.count <=4);
++#ifdef TIZENPSP_ARM_JIT
++				bool upload = curProgram->uniformValues_.Update(loc, 1, c.uniform4.count, c.uniform4.v);
++				TizenUniformUpdate(upload);
++				if (!upload) break;
++#endif
+ 				switch (c.uniform4.count) {
+ 				case 1: glUniform1f(loc, c.uniform4.v[0]); break;
+ 				case 2: glUniform2fv(loc, 1, c.uniform4.v); break;
+@@ -1220,6 +1228,11 @@
+ 			}
+ 			if (loc >= 0) {
+ 				_dbg_assert_(c.uniform4.count >=1 && c.uniform4.count <=4);
++#ifdef TIZENPSP_ARM_JIT
++				bool upload = curProgram->uniformValues_.Update(loc, 2, c.uniform4.count, c.uniform4.v);
++				TizenUniformUpdate(upload);
++				if (!upload) break;
++#endif
+ 				switch (c.uniform4.count) {
+ 				case 1: glUniform1uiv(loc, 1, (GLuint *)c.uniform4.v); break;
+ 				case 2: glUniform2uiv(loc, 1, (GLuint *)c.uniform4.v); break;
+@@ -1239,6 +1252,11 @@
+ 			}
+ 			if (loc >= 0) {
+ 				_dbg_assert_(c.uniform4.count >=1 && c.uniform4.count <=4);
++#ifdef TIZENPSP_ARM_JIT
++				bool upload = curProgram->uniformValues_.Update(loc, 3, c.uniform4.count, c.uniform4.v);
++				TizenUniformUpdate(upload);
++				if (!upload) break;
++#endif
+ 				switch (c.uniform4.count) {
+ 				case 1: glUniform1iv(loc, 1, (GLint *)c.uniform4.v); break;
+ 				case 2: glUniform2iv(loc, 1, (GLint *)c.uniform4.v); break;
+@@ -1257,11 +1275,13 @@
+ 				loc = curProgram->GetUniformLoc(c.uniformStereoMatrix4.name);
+ 			}
+ 			if (loc >= 0) {
+-				if (GetVRFBOIndex() == 0) {
+-					glUniformMatrix4fv(loc, 1, false, c.uniformStereoMatrix4.mData);
+-				} else {
+-					glUniformMatrix4fv(loc, 1, false, c.uniformStereoMatrix4.mData + 16);
+-				}
++				const float *matrix = c.uniformStereoMatrix4.mData + (GetVRFBOIndex() == 0 ? 0 : 16);
++#ifdef TIZENPSP_ARM_JIT
++				bool upload = curProgram->uniformValues_.Update(loc, 4, 16, matrix);
++				TizenUniformUpdate(upload);
++				if (upload)
++#endif
++					glUniformMatrix4fv(loc, 1, false, matrix);
+ 			}
+ 			if (GetVRFBOIndex() == 1 || GetVRPassesCount() == 1) {
+ 				// Only delete the data if we're rendering the only or the second eye.
+@@ -1279,6 +1299,11 @@
+ 				loc = curProgram->GetUniformLoc(c.uniformMatrix4.name);
+ 			}
+ 			if (loc >= 0) {
++#ifdef TIZENPSP_ARM_JIT
++				bool upload = curProgram->uniformValues_.Update(loc, 4, 16, c.uniformMatrix4.m);
++				TizenUniformUpdate(upload);
++				if (upload)
++#endif
+ 				glUniformMatrix4fv(loc, 1, false, c.uniformMatrix4.m);
+ 			}
+ 			CHECK_GL_ERROR_IF_DEBUG();

@@ -1,0 +1,212 @@
+--- a/Core/MIPS/MIPS.h
++++ b/Core/MIPS/MIPS.h
+@@ -178,6 +178,10 @@
+ struct PendingCacheOperation {
+ 	u32 addr;
+ 	u32 size;
++#ifdef TIZENPSP_ARM_JIT
++	const char *source;
++	u32 pc;
++#endif
+ };
+ 
+ class MIPSState {
+@@ -309,10 +313,18 @@
+ 
+ 	// The immediate functions have the risk of invalidating the currently running block -
+ 	// might not behave correctly in all cases. Use Deferred when possible.
+-	void InvalidateICacheRangeImmediate(u32 address, u32 length);
++	void InvalidateICacheRangeImmediate(u32 address, u32 length
++#ifdef TIZENPSP_ARM_JIT
++	, const char *source = __builtin_FUNCTION()
++#endif
++	);
+ 
+ 	// Actual clearing is deferred until execution begins again.
+-	void InvalidateICacheRangeDeferred(u32 address, u32	length);
++	void InvalidateICacheRangeDeferred(u32 address, u32	length
++#ifdef TIZENPSP_ARM_JIT
++	, const char *source = __builtin_FUNCTION()
++#endif
++	);
+ 	void ClearJitCacheDeferred();
+ 
+ 	void ProcessPendingInvalidates();
+--- a/Core/MIPS/MIPS.cpp
++++ b/Core/MIPS/MIPS.cpp
+@@ -547,9 +547,17 @@
+ 	return mips == &mipsr4k && MeCore::g_meState ? &MeCore::g_meState->cpu : nullptr;
+ }
+ 
+-void MIPSState::InvalidateICacheRangeImmediate(u32 address, u32 length) {
++void MIPSState::InvalidateICacheRangeImmediate(u32 address, u32 length
++#ifdef TIZENPSP_ARM_JIT
++	, const char *source
++#endif
++) {
+ 	if (MIPSState *me = MediaEngineToNotify(this)) {
+-		me->InvalidateICacheRangeDeferred(address, length);
++		me->InvalidateICacheRangeDeferred(address, length
++#ifdef TIZENPSP_ARM_JIT
++			, source
++#endif
++		);
+ 	}
+ 	if (!IsMediaEngine()) {
+ 		RemoveModifiedReplacementsInRange(address, length);
+@@ -559,6 +567,10 @@
+ 		return;
+ 	}
+ 	if (length != 0) {
++#ifdef TIZENPSP_ARM_JIT
++		jit->tizenInvalidationSource = source;
++		jit->tizenInvalidationPC = pc;
++#endif
+ 		jit->InvalidateCacheAt(address, length);
+ 	}
+ }
+@@ -575,6 +587,10 @@
+ 			if (!IsMediaEngine())
+ 				RemoveModifiedReplacementsInRange(p.addr, p.size);
+ 			if (jit && !all) {
++#ifdef TIZENPSP_ARM_JIT
++				jit->tizenInvalidationSource = p.source;
++				jit->tizenInvalidationPC = p.pc;
++#endif
+ 				jit->InvalidateCacheAt(p.addr, p.size);
+ 			}
+ 		}
+@@ -584,11 +600,23 @@
+ 	}
+ }
+ 
+-void MIPSState::InvalidateICacheRangeDeferred(u32 address, u32 length) {
++void MIPSState::InvalidateICacheRangeDeferred(u32 address, u32 length
++#ifdef TIZENPSP_ARM_JIT
++	, const char *source
++#endif
++) {
+ 	// TODO: We can try to merge the invalidate with the previous one.
+-	pendingInvalidates_.push_back(PendingCacheOperation{address, length});
++	pendingInvalidates_.push_back(PendingCacheOperation{address, length
++#ifdef TIZENPSP_ARM_JIT
++		, source, pc
++#endif
++	});
+ 	if (MIPSState *me = MediaEngineToNotify(this)) {
+-		me->InvalidateICacheRangeDeferred(address, length);
++		me->InvalidateICacheRangeDeferred(address, length
++#ifdef TIZENPSP_ARM_JIT
++			, source
++#endif
++		);
+ 	}
+ 	if (jit && !IsMediaEngine()) {
+ 		Core_ReenterDispatcher();
+--- a/Core/MIPS/JitCommon/JitCommon.h
++++ b/Core/MIPS/JitCommon/JitCommon.h
+@@ -136,6 +136,10 @@
+ 
+ 	class JitInterface {
+ 	public:
++#ifdef TIZENPSP_ARM_JIT
++		const char *tizenInvalidationSource = "direct_jit";
++		u32 tizenInvalidationPC = 0;
++#endif
+ 		virtual ~JitInterface() {}
+ 
+ 		virtual void GetStats(JitStats *stats) const {}
+--- a/Core/MIPS/IR/IRJit.h
++++ b/Core/MIPS/IR/IRJit.h
+@@ -18,6 +18,9 @@
+ #pragma once
+ 
+ #include <cstring>
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_invalidation_probe.h"
++#endif
+ #include <unordered_map>
+ 
+ #include "Common/CommonTypes.h"
+@@ -223,6 +226,9 @@
+ 
+ 	JitOptions jo;
+ 
++#ifdef TIZENPSP_ARM_JIT
++	TizenInvalidationProbe tizenProbe_;
++#endif
+ 	IRFrontend frontend_;
+ 	JitBlockTable blocks_;
+ 	IRJitDebugInterface debugInterface_{ *this };
+--- a/Core/MIPS/IR/IRJit.cpp
++++ b/Core/MIPS/IR/IRJit.cpp
+@@ -17,6 +17,9 @@
+ 
+ #include "ppsspp_config.h"
+ #include <set>
++#ifdef TIZENPSP_ARM_JIT
++#include "tizenpsp_jit_diagnostics.h"
++#endif
+ #include <algorithm>
+ 
+ #include "ext/xxhash.h"
+@@ -116,6 +119,9 @@
+ 	if (profiling_)
+ 		WriteProfileReport();
+ 	blocks_.Clear();
++#ifdef TIZENPSP_ARM_JIT
++	tizenProbe_.Clear();
++#endif
+ }
+ 
+ void IRInterpreterJit::ClearCache() {
+@@ -173,6 +179,26 @@
+ 
+ void IRJit::InvalidateCacheAt(u32 em_address, int length) {
+ 	std::vector<int> numbers = blocks_.FindInvalidatedBlockNumbers(em_address, length);
++#ifdef TIZENPSP_ARM_JIT
++	{
++	TizenPerfScope probeTime(TizenPerfPhase::InvalidationProbe);
++	unsigned same=0, changed=0, unknown=0;
++	for (int n : numbers) {
++		const auto *block=blocks_.GetBlock(n);
++		u32 addr, size; block->GetRange(&addr, &size);
++		const u8 *data=Memory::IsValidRange(addr,size)?blocks_.Space().GetPointerUnchecked(addr):nullptr;
++		switch(tizenProbe_.Observe(n,data,size)) {
++		case TizenInvalidationProbe::Same: ++same; break;
++		case TizenInvalidationProbe::Changed: ++changed; break;
++		default: ++unknown; break;
++		}
++	}
++	if (TizenInvalidationRecord(tizenInvalidationSource,(unsigned)numbers.size(),same,changed,unknown))
++		INFO_LOG(Log::JIT,"INV_PROBE source=%s guest_pc=%08x address=%08x bytes=%u blocks=%u same=%u changed=%u unknown=%u",tizenInvalidationSource,tizenInvalidationPC,em_address,(u32)length,(unsigned)numbers.size(),same,changed,unknown);
++	tizenInvalidationSource="direct_jit";
++	tizenInvalidationPC=0;
++	}
++#endif
+ 	if (numbers.empty()) {
+ 		return;
+ 	}
+@@ -189,6 +215,9 @@
+ 
+ void IRJit::InvalidateBlock(int block_num) {
+ 	JitBlock *block = blocks_.GetBlock(block_num);
++#ifdef TIZENPSP_ARM_JIT
++	tizenProbe_.Forget(block_num);
++#endif
+ 	// Before Destroy, which forgets the block's address. Blocks linked to it jump straight in.
+ 	InvalidateTargetBlock(block_num);
+ 	blocks_.RemoveBlockFromPageLookup(block_num);
+@@ -284,6 +313,12 @@
+ 	// Updates stats, also enters the block in the block shadow.
+ 	blocks_.FinalizeBlock(block_num);
+ 	FinalizeTargetBlock(block_num);
++#ifdef TIZENPSP_ARM_JIT
++	if ((block_num & 15)==0 && mipsBytes && mipsBytes<=65536 && Memory::IsValidRange(em_address,mipsBytes)) {
++		TizenPerfScope probeTime(TizenPerfPhase::InvalidationProbe);
++		tizenProbe_.Capture(block_num,blocks_.Space().GetPointerUnchecked(em_address),mipsBytes);
++	}
++#endif
+ 	return CompileResult::OK;
+ }
+ 

@@ -1,0 +1,152 @@
+--- a/Core/MIPS/IR/IRJit.h
++++ b/Core/MIPS/IR/IRJit.h
+@@ -20,6 +20,7 @@
+ #include <cstring>
+ #ifdef TIZENPSP_ARM_JIT
+ #include "tizenpsp_invalidation_probe.h"
++#include "tizenpsp_ir_retention.h"
+ #endif
+ #include <unordered_map>
+ 
+@@ -228,6 +229,10 @@
+ 
+ #ifdef TIZENPSP_ARM_JIT
+ 	TizenInvalidationProbe tizenProbe_;
++	TizenIRRetention tizenRetention_;
++	bool TizenRetentionEnabled() const;
++	TizenIRRetention::Context TizenRetentionContext() const;
++	bool TizenTryRetainBlock(int block_num, unsigned &revalidated);
+ #endif
+ 	IRFrontend frontend_;
+ 	JitBlockTable blocks_;
+--- a/Core/MIPS/IR/IRJit.cpp
++++ b/Core/MIPS/IR/IRJit.cpp
+@@ -34,6 +34,9 @@
+ #include "Core/Core.h"
+ #include "Core/CoreTiming.h"
+ #include "Core/Debugger/SymbolMap.h"
++#ifdef TIZENPSP_ARM_JIT
++#include "Core/Debugger/Breakpoints.h"
++#endif
+ #include "Core/HLE/ReplaceTables.h"
+ #include "Core/HLE/sceKernelMemory.h"
+ #include "Core/MemMap.h"
+@@ -121,6 +124,7 @@
+ 	blocks_.Clear();
+ #ifdef TIZENPSP_ARM_JIT
+ 	tizenProbe_.Clear();
++	tizenRetention_.Clear();
+ #endif
+ }
+ 
+@@ -177,7 +181,62 @@
+ 		blocks_.GetBlock(blockNum)->profileStats_ = JitBlockProfileStats{};
+ }
+ 
++#ifdef TIZENPSP_ARM_JIT
++// Syscall/replacement code may embed resolved host function pointers beyond the IR.
++// Debug/tracing/interpreter paths deliberately keep ordinary invalidation.
++static bool TizenRetainableIR(const std::vector<IRInst> &instructions) {
++	if (instructions.empty()) return false;
++	for (const auto &inst : instructions) {
++		switch (inst.op) {
++		case IROp::Syscall: case IROp::SyscallUnresolved: case IROp::CallReplacement:
++		case IROp::Interpret: case IROp::Break: case IROp::Breakpoint:
++		case IROp::MemoryCheck: case IROp::LogIRBlock: case IROp::Bad:
++			return false;
++		default: break;
++		}
++	}
++	return true;
++}
++
++bool IRJit::TizenRetentionEnabled() const {
++	return !jo.optimizeForInterpreter && !mips_->IsMediaEngine() && !profiling_ &&
++		!mipsTracer.tracing_enabled && !g_breakpoints.HasBreakPoints() &&
++		!g_breakpoints.HasTempBreakPoint() && !g_breakpoints.HasMemChecks();
++}
++
++TizenIRRetention::Context IRJit::TizenRetentionContext() const {
++	return {(u32)g_Config.bFastMemory, (u32)Memory::DepthMirrorsActive(),
++		Memory::g_MemorySize, g_Config.uJitDisableFlags};
++}
++
++bool IRJit::TizenTryRetainBlock(int block_num, unsigned &revalidated) {
++	const JitBlock *block = blocks_.GetBlock(block_num);
++	u32 address, size; block->GetRange(&address, &size);
++	if (!block->IsValid() || Memory::MayRunInKernelMode(address) || !Memory::IsValidRange(address, size))
++		return false;
++	const u8 *bytes = blocks_.Space().GetPointerUnchecked(address);
++	if (!tizenRetention_.CodeMatches(block_num, address, TizenRetentionContext(), bytes, size))
++		return false;
++	// Re-resolve lookahead instructions, hooks, prefixes and compiler assumptions.
++	// A copy avoids changing the running frontend while examining cached blocks.
++	IRFrontend current = frontend_;
++	std::vector<IRInst> instructions;
++	u32 currentSize = 0;
++	current.DoJit(address, instructions, currentSize);
++	++revalidated;
++	if (currentSize != size || current.CheckRounding(address) || !TizenRetainableIR(instructions) ||
++		!tizenRetention_.IRMatches(block_num, instructions.data(), instructions.size() * sizeof(IRInst)))
++		return false;
++	// Keep native entry, block shadow, page index and link bookkeeping together.
++	tizenProbe_.Capture(block_num, bytes, size);
++	return true;
++}
++#endif
++
+ void IRJit::InvalidateCacheAt(u32 em_address, int length) {
++#ifdef TIZENPSP_ARM_JIT
++	const bool retain = TizenIRRetention::BroadRequest(tizenInvalidationSource, em_address, length) && TizenRetentionEnabled();
++#endif
+ 	std::vector<int> numbers = blocks_.FindInvalidatedBlockNumbers(em_address, length);
+ #ifdef TIZENPSP_ARM_JIT
+ 	{
+@@ -205,18 +264,32 @@
+ 
+ 	DEBUG_LOG(Log::JIT, "Invalidating IR block cache at %08x (%d bytes): %d blocks", em_address, length, (int)numbers.size());
+ 	invalidations_++;
+-	invalidatedBlocks_ += (int)numbers.size();
++#ifdef TIZENPSP_ARM_JIT
++	unsigned retained = 0, revalidated = 0;
++	TizenPerfScope retentionTime(TizenPerfPhase::IRRetention);
++#endif
+ 
+ 	for (int block_num : numbers) {
++#ifdef TIZENPSP_ARM_JIT
++		if (retain && TizenTryRetainBlock(block_num, revalidated)) {
++			++retained;
++			continue;
++		}
++#endif
++		++invalidatedBlocks_;
+ 		// TODO: We are invalidating a lot of blocks that are already invalid (yu gi oh).
+ 		InvalidateBlock(block_num);
+ 	}
++#ifdef TIZENPSP_ARM_JIT
++	if (retain) TizenRetentionRecord((unsigned)numbers.size(), revalidated, retained, tizenRetention_.Used());
++#endif
+ }
+ 
+ void IRJit::InvalidateBlock(int block_num) {
+ 	JitBlock *block = blocks_.GetBlock(block_num);
+ #ifdef TIZENPSP_ARM_JIT
+ 	tizenProbe_.Forget(block_num);
++	tizenRetention_.Forget(block_num);
+ #endif
+ 	// Before Destroy, which forgets the block's address. Blocks linked to it jump straight in.
+ 	InvalidateTargetBlock(block_num);
+@@ -314,6 +387,13 @@
+ 	blocks_.FinalizeBlock(block_num);
+ 	FinalizeTargetBlock(block_num);
+ #ifdef TIZENPSP_ARM_JIT
++	if (TizenRetentionEnabled() && !Memory::MayRunInKernelMode(em_address) && mipsBytes &&
++		mipsBytes <= 65536 && Memory::IsValidRange(em_address, mipsBytes) && TizenRetainableIR(instructions)) {
++		TizenPerfScope retentionTime(TizenPerfPhase::IRRetention);
++		tizenRetention_.Capture(block_num, em_address, TizenRetentionContext(),
++			blocks_.Space().GetPointerUnchecked(em_address), mipsBytes,
++			instructions.data(), instructions.size() * sizeof(IRInst));
++	}
+ 	if ((block_num & 15)==0 && mipsBytes && mipsBytes<=65536 && Memory::IsValidRange(em_address,mipsBytes)) {
+ 		TizenPerfScope probeTime(TizenPerfPhase::InvalidationProbe);
+ 		tizenProbe_.Capture(block_num,blocks_.Space().GetPointerUnchecked(em_address),mipsBytes);
